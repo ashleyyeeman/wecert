@@ -728,7 +728,13 @@ const localeMessages = {
     "Preview": "預覽",
     "AI tutor": "示例 AI 導師",
     "English": "英文",
-    "Page": "頁面"
+    "Page": "頁面",
+    "Additional study times (optional)": "其他可上課時段（可選）",
+    "For hybrid courses, select every time you can attend. Required online and workshop sessions must both fit.": "如選混合模式課程，請勾選所有可上課時段；必修網課與工作坊都必須符合你的時間安排。",
+    "Complete your skills assessment to personalise this learning plan.": "先完成技能評估，建立適合你的個人學習計劃。",
+    "Fits your budget, study times and career direction": "符合你的預算、上課時間與職涯方向",
+    "No further course currently fits your goal, budget and study times. Explore free resources or review your assessment.": "目前沒有其他課程同時符合你的目標、預算與上課時間。可探索免費教材，或重新檢視評估。",
+    "Manage appointment": "管理預約"
   },
   "zh-Hans": {
     "Home": "首页",
@@ -1456,6 +1462,12 @@ const localeMessages = {
     "Preview": "预览",
     "AI tutor": "示例 AI 导师",
     "English": "英文",
-    "Page": "页面"
+    "Page": "页面",
+    "Additional study times (optional)": "其他可上课时段（可选）",
+    "For hybrid courses, select every time you can attend. Required online and workshop sessions must both fit.": "如选混合模式课程，请勾选所有可上课时段；必修网课与工作坊都必须符合你的时间安排。",
+    "Complete your skills assessment to personalise this learning plan.": "先完成技能评估，建立适合你的个人学习计划。",
+    "Fits your budget, study times and career direction": "符合你的预算、上课时间与职涯方向",
+    "No further course currently fits your goal, budget and study times. Explore free resources or review your assessment.": "目前没有其他课程同时符合你的目标、预算与上课时间。可探索免费教材，或重新检视评估。",
+    "Manage appointment": "管理预约"
   }
 };

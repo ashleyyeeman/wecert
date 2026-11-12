@@ -377,7 +377,9 @@ document.addEventListener('submit',event=>{
     }
     case 'assessment-form':
       if (step === 0) {
-        state.profile = {...state.profile,education:data.get('education'),experience:data.get('experience'),mode:data.get('mode'),availability:data.get('availability'),hours:Number(data.get('hours')),budget:Number(data.get('budget'))};
+        state.assessed = false;
+        state.review = false;
+        state.profile = {...state.profile,education:data.get('education'),experience:data.get('experience'),mode:data.get('mode'),availability:data.get('availability'),additionalAvailability:data.getAll('additionalAvailability'),hours:Number(data.get('hours')),budget:Number(data.get('budget'))};
       } else {
         if (state.profile.goal !== data.get('goal')) state.assessmentAnswers = [];
         state.profile = {...state.profile,goal:data.get('goal'),skills:data.getAll('skills')};

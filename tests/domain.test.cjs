@@ -37,3 +37,19 @@ test('only representative courses expose complete course-specific checks',()=>{
   assert(run('courses.filter(c=>c.demo).every(c=>courseChecks[c.id].length===3 && coursePreparation[c.id].length===4)'));
   assert(!run('JSON.stringify(courseChecks.japanese)+JSON.stringify(curriculum.japanese)').includes('SUM'));
 });
+
+test('hybrid timetables require both evenings and weekends, and extra times are respected',()=>{
+  const profile="{...sampleProfile,mode:'Hybrid',budget:1000,hours:5}";
+  assert(!run(`assessmentMatches(${profile}).map(m=>m.course.id)`).includes('office'));
+  assert(!run(`assessmentMatches({...sampleProfile,mode:'Hybrid',budget:1000,hours:5,availability:'Weekends'}).map(m=>m.course.id)`).includes('accounting'));
+  assert(run(`assessmentMatches({...${profile},additionalAvailability:['Weekends']}).map(m=>m.course.id)`).includes('office'));
+  assert(run(`assessmentMatches({...${profile},availability:'Flexible'}).map(m=>m.course.id)`).includes('office'));
+});
+test('next-course suggestions honour budget, timetable, career direction and completed courses',()=>{
+  assert.equal(run("nextCourseRecommendation(courses.find(c=>c.id==='spreadsheets'),{...state,profile:{...sampleProfile,budget:0}})"),null);
+  assert.equal(run("nextCourseRecommendation(courses.find(c=>c.id==='spreadsheets'),{...state,profile:{...sampleProfile,availability:'Weekends'}})"),null);
+  assert.equal(run("nextCourseRecommendation(courses.find(c=>c.id==='japanese'),state)"),null);
+  const later=run("nextCourseRecommendation(courses.find(c=>c.id==='spreadsheets'),state)");
+  assert.equal(later.course.id,'intermediate');assert.equal(later.ready,false);
+  assert.equal(run("nextCourseRecommendation(courses.find(c=>c.id==='spreadsheets'),{...state,courses:{...state.courses,intermediate:[1,2,3]}})"),null);
+});

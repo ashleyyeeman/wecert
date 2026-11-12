@@ -21,6 +21,7 @@ function normaliseState(saved) {
   for (const id of Object.keys(merged.examByCourse)) {
     merged.examByCourse[id] = Array.isArray(merged.examByCourse[id]) ? [...new Set(merged.examByCourse[id].filter(n=>Number.isInteger(n)&&n>=0&&n<4))] : [];
   }
+  merged.profile.additionalAvailability = Array.isArray(merged.profile.additionalAvailability) ? merged.profile.additionalAvailability.filter(slot=>studyTimes.includes(slot)) : [];
   merged.profile.skills = Array.isArray(merged.profile.skills) ? merged.profile.skills.filter(s=>skills.includes(s)) : [];
   merged.name = typeof merged.name === 'string' && merged.name.trim() ? merged.name.slice(0,40) : fresh.name;
   merged.comments = Array.isArray(merged.comments) ? merged.comments.filter(c=>c&&typeof c==='object') : [];

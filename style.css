@@ -594,3 +594,27 @@ html:lang(zh-Hant) .hero h1,html:lang(zh-Hans) .hero h1 {font-size:clamp(36px,3.
   .language-switch button {min-width:31px;}
 }
 .modal-languages {display:flex;justify-content:flex-end;margin:12px 0;}
+
+/* Keep supporting learner information readable, including inherited compact styles. */
+.course-meta,.result-count,.breadcrumb,dt,.skills-fields legend,.choice,.checklist,
+.lesson-index,.lesson-progress,.next-course p,.dashboard-side .panel-title p,
+.category p,.match p,.match-top .badge,.match-bottom,.match-bottom .text-link,
+.profile-bottom>span:last-child {font-size:14px;line-height:1.55;}
+.discussion-head .button,.support-links .button {font-size:14px;min-height:44px;}
+.language-switch button {min-width:44px;min-height:44px;}
+@media(max-width:600px) {
+  .account>.button svg {display:none;}
+  .account>.button {padding:0 8px;}
+  .account {gap:5px;}
+  .language-switch button {min-width:40px;min-height:44px;}
+  .navbar {grid-template-columns:auto minmax(0,1fr);}
+  .account {justify-content:flex-end;}
+}
+@media(max-width:365px) {
+  .navbar {grid-template-columns:1fr;gap:7px;}
+  .navbar .logo {grid-column:1;grid-row:1;}
+  .account {grid-column:1;grid-row:2;justify-content:flex-start;}
+  .navbar nav {grid-column:1;grid-row:3;}
+  .language-switch button {min-width:44px;}
+}
+.choice {min-height:44px;}

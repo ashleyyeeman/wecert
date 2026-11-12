@@ -46,16 +46,39 @@ function hasPrerequisite(c,p,answers,completedCourses={}) {
   // A self-report alone cannot establish the maths prerequisite for this preview.
   return c.id !== 'actuarial';
 }
+const studyTimes = ['Weekday evenings','Weekday daytime','Weekends'];
+function availableStudySlots(profile) {
+  return profile.availability === 'Flexible' ? studyTimes : [...new Set([profile.availability,...(profile.additionalAvailability || [])])].filter(slot=>studyTimes.includes(slot));
+}
+function profileAvailabilityText(profile) {
+  return profile.availability === 'Flexible' ? 'Flexible' : availableStudySlots(profile).join(' + ');
+}
+function scheduleFits(course,profile) {
+  const available = availableStudySlots(profile);
+  return course.schedule.requiredSlots ? course.schedule.requiredSlots.every(slot=>available.includes(slot)) :
+    course.schedule.slots.includes('Flexible') || course.schedule.slots.some(slot=>available.includes(slot));
+}
+function courseConstraintsFit(course,profile) {
+  return course.fee !== null && course.fee <= profile.budget && course.schedule.hours <= profile.hours &&
+    scheduleFits(course,profile) && (profile.mode === 'Any format' || profile.mode === course.mode);
+}
 function assessmentMatches(profile,answers=state.assessmentAnswers,completedCourses=state.courses) {
   const evidence = assessmentEvidence(profile,answers);
-  return courses.filter(c=>c.fee !== null && c.fee <= profile.budget &&
-    c.schedule.hours <= profile.hours &&
-    (profile.availability === 'Flexible' || c.schedule.slots.includes(profile.availability)) &&
-    (profile.mode === 'Any format' || profile.mode === c.mode) &&
-    hasPrerequisite(c,profile,answers,completedCourses)).map(course=>{
+  return courses.filter(c=>courseConstraintsFit(c,profile) && hasPrerequisite(c,profile,answers,completedCourses)).map(course=>{
       const matchGoal = course.goal === profile.goal;
       const gap = evidence[course.skill] && evidence[course.skill].correct < evidence[course.skill].total;
       const score = 10*matchGoal + 3*gap + 2*course.demo - course.fee/1000;
       return {course,score,matchGoal,matchMode:true,gap};
     }).sort((a,b)=>b.score-a.score).slice(0,3);
+}
+function nextCourseRecommendation(selected,learner) {
+  const profile = learner.profile;
+  const goal = !learner.assessed || profile.goal === 'Explore my options' ? selected.goal : profile.goal;
+  const candidates = courses.filter(c=>c.id !== selected.id && c.goal === goal && courseConstraintsFit(c,profile) &&
+    !courseLessons(c).every((_,i)=>learner.courses[c.id]?.includes(i+1)));
+  const prerequisiteMet = c=>hasPrerequisite(c,profile,learner.assessmentAnswers,learner.courses);
+  const immediate = candidates.filter(prerequisiteMet).sort((a,b)=>Number(b.demo)-Number(a.demo) || a.fee-b.fee);
+  if (immediate.length) return {course:immediate[0],ready:true};
+  const later = candidates.find(c=>c.id==='intermediate' && ['office','spreadsheets'].includes(selected.id));
+  return later ? {course:later,ready:false} : null;
 }

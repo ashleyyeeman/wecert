@@ -2,11 +2,13 @@
 
 A classroom prototype with English, Traditional Chinese and Simplified Chinese interfaces of affordable vocational training and career support for Hong Kong learners. The WeCert name and original deep green / mint visual style are retained. Use the **繁**, **简** and **ENG** buttons to switch languages; the selected language is remembered in this browser. Switching preserves unfinished forms, questions and open-dialog answers.
 
+See [the original recommendation audit](IMPROVEMENT-AUDIT.md) for a point-by-point completion record and the separate operational-backend roadmap.
+
 ## Try the demo
 
 Serve this directory with `python3 -m http.server 8000`, then open http://localhost:8000. There is no build step or runtime package dependency. GitHub Pages can serve the repository root directly.
 
-- **Assessment:** profile → skills and goal → four goal-specific scenarios → evidence and an explained learning path. Budget, study format, weekly hours, timetable and prerequisites constrain matches. Education and experience inform support suggestions, not eligibility for beginner courses.
+- **Assessment:** profile → skills and goal → four goal-specific scenarios → evidence and an explained learning path. Budget, study format, weekly hours, all required timetable slots and prerequisites constrain matches. Hybrid courses requiring evening and weekend attendance must fit both; learners can select additional available times. Education and experience inform support suggestions, not eligibility for beginner courses.
 - **Complete representative routes:** Spreadsheet Essentials (10 lessons), Basic Office Digital Literacy (3 lessons) and introductory Japanese (3 lessons). Each has its own guide, practice, three-question knowledge check, checklist and saved progress. Other courses are explicitly previews.
 - **Shareable lessons:** `#lesson/japanese/2` identifies the course and lesson. Old numeric `#lesson/7` links deterministically open the original spreadsheet course. Invalid lessons show a recovery page.
 - **Career dashboard:** next action, personal pathway, course switching, sample career support, course-specific placement eligibility and illustrative income/employment follow-ups at 3, 6 and 12 months. Zero baseline income has no percentage IIAE.

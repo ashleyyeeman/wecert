@@ -91,10 +91,10 @@ const coursePreparation = {
   japanese:['Review kana and greetings','Practise introductions and reading','Pass the Japanese knowledge check','Review language errors; plan listening practice']
 };
 const courseSchedules = {
-  office:{hours:4, slots:['Weekday evenings','Weekends'],time:'Tue 7–9 PM online + Sat 10 AM–12 PM workshop',location:'Online + proposed Hong Kong community venue (TBC)'},
+  office:{hours:4, slots:['Weekday evenings','Weekends'],requiredSlots:['Weekday evenings','Weekends'],time:'Tue 7–9 PM online + Sat 10 AM–12 PM workshop',location:'Online + proposed Hong Kong community venue (TBC)'},
   spreadsheets:{hours:3, slots:['Weekday evenings','Weekends','Weekday daytime'],time:'Self-paced study + optional Wed 7–8 PM online clinic',location:'Online'},
   service:{hours:4, slots:['Weekends'],time:'Sat 10 AM–2 PM',location:'Proposed Hong Kong community venue (TBC)'},
-  accounting:{hours:5, slots:['Weekday evenings','Weekends'],time:'Tue 7–9 PM online + Sat 10 AM–1 PM workshop',location:'Online + proposed Hong Kong community venue (TBC)'},
+  accounting:{hours:5, slots:['Weekday evenings','Weekends'],requiredSlots:['Weekday evenings','Weekends'],time:'Tue 7–9 PM online + Sat 10 AM–1 PM workshop',location:'Online + proposed Hong Kong community venue (TBC)'},
   japanese:{hours:3, slots:['Weekday evenings','Weekends'],time:'Self-paced study + optional Thu 7–8 PM online clinic',location:'Online'},
   actuarial:{hours:6, slots:['Weekends'],time:'Sat 10 AM–4 PM',location:'Online + proposed Hong Kong community venue (TBC)'},
   intermediate:{hours:4, slots:['Weekday evenings'],time:'Wed 7–9 PM online + 2 hours independent practice',location:'Online'},
