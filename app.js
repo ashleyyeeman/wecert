@@ -47,7 +47,8 @@ const currentRoute = () => location.hash.slice(1).split('/')[0] || 'home';
 const subroute = () => location.hash.slice(1).split('/')[1];
 const titleBlock = (title, desc, aside='') => `<div class="section-heading page-title"><div><h1>${title}</h1><p>${desc}</p></div>${aside}</div>`;
 const crumb = (text, base='') => `<div class="breadcrumb"><a href="#home">Home</a>${chevron()}${base}<b>${text}</b></div>`;
-const logo = `<a href="#home" class="logo" aria-label="WeCert home"><img src="assets/bridge.svg" width="37" height="37" alt=""><span>We<b>Cert</b></span></a>`;
+const brandMark = `<span class="brand-mark" aria-hidden="true"><img src="assets/wecert-logo.jpg" width="1254" height="1254" alt="" decoding="async"></span>`;
+const logo = `<a href="#home" class="logo" aria-label="WeCert home">${brandMark}<span>We<b>Cert</b></span></a>`;
 function header(route) {
   const teaching=teacherRoute(route);
   const selected=teaching?(route==='teacher-course'?'teacher-courses':route==='teacher-learner'?'teacher-learners':route):route==='course'?'courses':route==='lesson'?'dashboard':route;
@@ -55,7 +56,7 @@ function header(route) {
   return `<header><div class="container navbar">${logo}<nav aria-label="Main navigation">${(teaching?teacherNavItems:navItems).map(([id,label])=>`<a href="#${id}" ${id===selected?'class="selected" aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="account">${languageControls()}${classroom.enabled&&!classroom.user?action('Sign in','cloud-signin','compact'):!teaching&&name==='Alex Chan'&&route==='home'?action('Try demo','demo','compact',arrow()):`<button class="profile-link" type="button" data-action="${remoteActive()?'cloud-account':teaching?'teacher-profile':'profile'}"><span class="avatar">${esc(name.split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase())}</span><span class="account-name">${esc(name)}</span>${icon('chev',15)}</button>`}</div></div></header>`;
 }
 function footer() {
-  return `<footer><div class="container footer-inner"><span class="footer-brand">WeCert <span>${classroom.enabled?'· Classroom platform':'· Interactive prototype'}</span></span><div><a href="#about">About us</a><a href="#resources">Free starter resources</a><a href="#proposal">Project Proposal</a><button type="button" data-action="help">Help centre</button><button type="button" data-action="privacy">${classroom.enabled?'Account privacy':'Demo privacy'}</button></div></div></footer>`;
+  return `<footer><div class="container footer-inner"><span class="footer-brand">${brandMark}<span>WeCert <span class="footer-caption">${classroom.enabled?'· Classroom platform':'· Interactive prototype'}</span></span></span><div><a href="#about">About us</a><a href="#resources">Free starter resources</a><a href="#proposal">Project Proposal</a><button type="button" data-action="help">Help centre</button><button type="button" data-action="privacy">${classroom.enabled?'Account privacy':'Demo privacy'}</button></div></div></footer>`;
 }
 function homeRegistration() {
   if(classroom.enabled)return `<section class="card registration">${tile('shield','blue')}<h2>${classroom.user?'Your learning, wherever you are':'Continue on any device'}</h2><p>Use your account to keep progress, questions and teacher feedback together.</p><div class="modal-actions">${classroom.user?link('Open learner dashboard','#dashboard','',arrow()):action('Sign in','cloud-signin','',arrow())}${!classroom.user?action('Create account','cloud-start-signup','outline'):action('Your account','cloud-account','outline')}</div>${syncIndicator()}</section>`;
