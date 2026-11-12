@@ -3,6 +3,11 @@
 async function handleTeacherAction(button) {
   const id=button.dataset.id;
   switch(button.dataset.action) {
+    case 'teacher-demo-reset':
+      if(!teacherDemoMode)return true;
+      try{localStorage.removeItem(storageKey);}catch{}
+      state=demoState();step=0;teacherInboxFilter={course:'all',status:'unanswered'};viewHasUnsavedChanges=false;
+      if(dialog.open)dialog.close();go('teacher');note('Teacher demo reset.');return true;
     case 'teacher-profile':
       if(remoteActive()){showAccountProfile();return true;}
       modal('Teacher profile',`<form id="teacher-profile-form" class="dialog-form"><div class="field"><label for="teacher-name">Teacher display name</label><input id="teacher-name" class="input" name="name" value="${esc(state.teacher.name)}" maxlength="40" required></div>${submitButton('Save teacher profile')}</form>`);return true;

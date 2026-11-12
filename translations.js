@@ -930,7 +930,21 @@ const localeMessages = {
     "Accounts and teaching records sync through the classroom service. Course prices, appointments, employer arrangements and qualifications remain illustrative.": "帳戶與教學紀錄透過課堂服務同步。課程價格、預約、僱主安排及資歷仍屬示例內容。",
     "Registered accounts sync learning progress, teacher questions, lesson guidance and announcements across devices. Appointments and impact figures remain illustrative.": "已註冊帳戶可跨裝置同步進度、教師提問、課堂指引與公告。預約及成效數據仍為示例。",
     "Expand the teaching programme and validate the platform with learners and teachers.": "擴展教學內容，並與學員及教師驗證平台。",
-    "Payments, real appointments, live AI and verified employer services are outside this release.": "此版本未包括付款、真實預約、即時 AI 或已確認的僱主服務。"
+    "Payments, real appointments, live AI and verified employer services are outside this release.": "此版本未包括付款、真實預約、即時 AI 或已確認的僱主服務。",
+    "Teacher demo": "教師 Demo 展示版",
+    "No sign-in required": "毋須登入",
+    "Open teacher demo": "開啟教師 Demo",
+    "Teacher demo · No sign-in required": "教師 Demo 展示版 · 毋須登入",
+    "Explore the demo or sign in to manage your classroom.": "試用 Demo 展示版，或登入管理正式課堂。",
+    "Explore sample learner progress, reply to questions and try course announcements.": "查看示例學員進度、嘗試回覆提問及發布課程公告。",
+    "Fictional learners. Changes stay in this browser.": "學員資料為虛構示例，操作改動只儲存在此瀏覽器。",
+    "Live teacher sign in": "登入正式教師後台",
+    "Reset teacher demo": "重設教師 Demo",
+    "Teacher demo reset.": "教師 Demo 已重設。",
+    "Demo mode": "Demo 展示模式",
+    "Fictional sample learners": "虛構示例學員",
+    "All names and progress in this demo are fictional.": "此 Demo 的所有姓名與進度均為虛構示例。",
+    "Open the live classroom to use account services.": "請開啟正式課堂以使用帳戶服務。"
   },
   "zh-Hans": {
     "Home": "首页",
@@ -1860,6 +1874,20 @@ const localeMessages = {
     "Accounts and teaching records sync through the classroom service. Course prices, appointments, employer arrangements and qualifications remain illustrative.": "帐户与教学纪录透过课堂服务同步。课程价格、预约、雇主安排及资历仍属示例内容。",
     "Registered accounts sync learning progress, teacher questions, lesson guidance and announcements across devices. Appointments and impact figures remain illustrative.": "已注册帐户可跨装置同步进度、教师提问、课堂指引与公告。预约及成效数据仍为示例。",
     "Expand the teaching programme and validate the platform with learners and teachers.": "扩展教学内容，并与学员及教师验证平台。",
-    "Payments, real appointments, live AI and verified employer services are outside this release.": "此版本未包括付款、真实预约、即时 AI 或已确认的雇主服务。"
+    "Payments, real appointments, live AI and verified employer services are outside this release.": "此版本未包括付款、真实预约、即时 AI 或已确认的雇主服务。",
+    "Teacher demo": "教师 Demo 展示版",
+    "No sign-in required": "毋须登入",
+    "Open teacher demo": "开启教师 Demo",
+    "Teacher demo · No sign-in required": "教师 Demo 展示版 · 毋须登入",
+    "Explore the demo or sign in to manage your classroom.": "试用 Demo 展示版，或登入管理正式课堂。",
+    "Explore sample learner progress, reply to questions and try course announcements.": "查看示例学员进度、尝试回复提问及发布课程公告。",
+    "Fictional learners. Changes stay in this browser.": "学员资料为虚构示例，操作改动只储存在此浏览器。",
+    "Live teacher sign in": "登入正式教师后台",
+    "Reset teacher demo": "重设教师 Demo",
+    "Teacher demo reset.": "教师 Demo 已重设。",
+    "Demo mode": "Demo 展示模式",
+    "Fictional sample learners": "虚构示例学员",
+    "All names and progress in this demo are fictional.": "此 Demo 的所有姓名与进度均为虚构示例。",
+    "Open the live classroom to use account services.": "请开启正式课堂以使用帐户服务。"
   }
 };

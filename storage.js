@@ -1,7 +1,7 @@
 'use strict';
 
-// Keep the existing key so returning learners retain their progress.
-const storageKey = 'skillbridge-hk-demo-v1';
+// Public teacher previews use their own records; existing browser progress is retained.
+const storageKey = teacherDemoMode ? 'wecert-teacher-demo-v1' : 'skillbridge-hk-demo-v1';
 function demoState() {
   return {version:3,name:'Alex Chan',courses:{spreadsheets:[1,2,3,4,5,6]},
     examByCourse:{spreadsheets:[0,1]},quizByCourse:{},profile:structuredClone(sampleProfile),

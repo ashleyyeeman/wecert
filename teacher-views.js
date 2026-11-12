@@ -1,13 +1,20 @@
 'use strict';
 
 let teacherInboxFilter = {course:'all',status:'unanswered'};
-const learnerBadge = learner => remoteActive()?'Student account':learner.current?'Current learner':'Sample learner';
-const questionBadge = question => remoteActive()?'Student account':question.source==='current'?'Current learner':'Sample learner';
+const learnerBadge = learner => remoteActive()?'Student account':teacherDemoMode?'Sample learner':learner.current?'Current learner':'Sample learner';
+const questionBadge = question => remoteActive()?'Student account':teacherDemoMode?'Sample learner':question.source==='current'?'Current learner':'Sample learner';
 const teacherNavItems = [['home','Home'],['teacher','Teaching overview'],['teacher-courses','Course management'],['teacher-learners','Learner progress'],['teacher-inbox','Question inbox']];
 const courseName = id => id==='all'?'All courses':getCourse(id)?.name||'Course preview';
 const teacherCourseOptions = selected => ['all',...courses.map(c=>c.id)].map(id=>`<option value="${id}" ${selected===id?'selected':''}>${esc(courseName(id))}</option>`).join('');
 function localTime(iso) {
   return `<time data-localized-time datetime="${esc(iso)}">${esc(iso?.slice(0,10)||'')}</time>`;
+}
+function teacherDemoEntry() {
+  return `<section class="card padded teacher-demo-entry"><div class="panel-title">${tile('briefcase','blue')}<div><h2>Teacher demo</h2><p>No sign-in required</p></div></div><p>Explore sample learner progress, reply to questions and try course announcements.</p><div class="modal-actions">${link('Open teacher demo',teacherDemoHref,'',arrow())}</div><p class="fineprint">Fictional learners. Changes stay in this browser.</p></section>`;
+}
+function teacherDemoBanner() {
+  if(!teacherDemoMode)return '';
+  return `<aside class="container teacher-demo-banner" aria-label="Demo mode"><div><strong>Teacher demo · No sign-in required</strong><p>Fictional learners. Changes stay in this browser.</p></div><div class="demo-tools">${action('Reset teacher demo','teacher-demo-reset','outline compact')}${link('Live teacher sign in',liveTeacherHref(),'outline compact')}</div></aside>`;
 }
 function teacherShell(title,description,body,aside='') {
   return `<main class="container inner teacher-workspace" id="main-content" tabindex="-1">${crumb('Teacher edition')}${titleBlock(title,description,`<div class="workspace-tools">${aside}${remoteActive()?syncIndicator()+action('Refresh classroom','cloud-refresh','outline compact'):''}</div>`)}
@@ -17,7 +24,7 @@ function teacherOverview() {
   const learners = teacherLearners();
   const pending = teacherQuestions().filter(q=>!q.teacherReply);
   const published = state.teacher.announcements.filter(a=>a.published);
-  const stats = [['people','Learners',learners.length,remoteActive()?'Authenticated student accounts':'Current learner + illustrative classmates'],['book','Teaching courses',courses.length,'3 complete routes; other courses are previews'],['chat','Awaiting a reply',pending.length,'Teacher questions only'],['mail','Published announcements',published.length,'Visible in the student workspace']];
+  const stats = [['people','Learners',learners.length,remoteActive()?'Authenticated student accounts':teacherDemoMode?'Fictional sample learners':'Current learner + illustrative classmates'],['book','Teaching courses',courses.length,'3 complete routes; other courses are previews'],['chat','Awaiting a reply',pending.length,'Teacher questions only'],['mail','Published announcements',published.length,'Visible in the student workspace']];
   return teacherShell('Teaching overview','Keep track of learning and help learners take their next step.',`
     <section class="dashboard-stats">${stats.map(([i,title,n,desc])=>`<article class="card stat">${tile(i)}<div><span>${title}</span><strong>${n}</strong><small>${desc}</small></div></article>`).join('')}</section>
     <div class="teacher-columns"><section class="card padded"><div class="section-heading"><div><h2>Questions needing attention</h2><p>${remoteActive()?'Reply in the inbox; each learner sees their own answer in the lesson.':'Reply in the inbox; the current learner sees your answer in the lesson.'}</p></div>${link('Open inbox','#teacher-inbox','outline compact')}</div>${pending.length?pending.slice(0,3).map(q=>`<article class="teacher-attention"><div>${badge(questionBadge(q),q.source==='current'?'mint':'sand')}<strong data-user-content>${esc(q.authorName)}</strong></div><p>${esc(courseName(q.course))} · Lesson ${q.lesson}</p><p ${q.source==='sample'?'':'data-user-content'}>${esc(q.question)}</p>${action('Reply','teacher-reply','outline compact','',`data-id="${esc(q.id)}"`)}</article>`).join(''):'<div class="teacher-empty"><h3>All caught up</h3><p>New teacher questions will appear here.</p></div>'}</section>
@@ -50,7 +57,7 @@ function teacherCourse() {
     <section class="card padded"><h2>Enrolled learners</h2><p>${remoteActive()?'Progress is loaded from enrolled student accounts.':'Progress combines this browser’s learner with clearly marked sample classmates.'}</p>${learners.length?learners.map(l=>`<article class="teacher-attention"><div><strong data-user-content>${esc(l.name)}</strong>${badge(learnerBadge(l),l.current?'mint':'sand')}</div>${bar(learnerCourseProgress(l,c.id))}<p>${learnerCourseProgress(l,c.id)}% · ${l.quizByCourse[c.id]?'Knowledge check passed':'Knowledge check not passed'}</p>${link('View learner','#teacher-learner/'+l.id,'outline compact')}</article>`).join(''):'<p class="teacher-empty">No enrolments in this demo yet.</p>'}</section></div><section class="card padded teacher-section"><div class="section-heading"><h2>Course announcements</h2>${action('New announcement','teacher-new-announcement','outline compact','',`data-course="${c.id}"`)}</div>${teacherAnnouncementList(c.id)}</section>`,link('Back to courses','#teacher-courses','outline'));
 }
 function teacherLearnerList() {
-  return teacherShell('Learner progress',remoteActive()?'Review individual progress and keep notes visible only to your teacher account.':'Review individual progress and keep private teaching notes in this browser.',`<section class="card padded"><p class="fineprint">${remoteActive()?'Only registered student accounts are listed here.':'The current learner is live browser data. Other names and progress are illustrative.'}</p><div class="teacher-roster">${teacherLearners().map(l=>{
+  return teacherShell('Learner progress',remoteActive()?'Review individual progress and keep notes visible only to your teacher account.':'Review individual progress and keep private teaching notes in this browser.',`<section class="card padded"><p class="fineprint">${remoteActive()?'Only registered student accounts are listed here.':teacherDemoMode?'All names and progress in this demo are fictional.':'The current learner is live browser data. Other names and progress are illustrative.'}</p><div class="teacher-roster">${teacherLearners().map(l=>{
     const ids=Object.keys(l.courses).filter(id=>getCourse(id));
     return `<article><div class="teacher-learner-name">${tile('people')}<div><h2 data-user-content>${esc(l.name)}</h2>${badge(learnerBadge(l),l.current?'mint':'sand')}</div></div><div class="teacher-roster-courses">${ids.map(id=>`<div><span>${esc(courseName(id))}</span><strong>${learnerCourseProgress(l,id)}%</strong>${bar(learnerCourseProgress(l,id))}</div>`).join('')||'<p>No courses yet.</p>'}</div>${link('View learner','#teacher-learner/'+l.id,'outline',arrow())}</article>`;
   }).join('')}</div></section>`);

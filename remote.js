@@ -11,6 +11,7 @@ function syncIndicator() {
   return `<span class="sync-indicator ${classroom.status==='error'?'sync-error':''}" role="status">${classroom.status==='saving'?'Saving changes':classroom.status==='error'?'Sync needs attention':classroom.user?'Synced to your account':'Secure classroom'}</span>`;
 }
 async function classroomApi(path,{method='GET',body}={}) {
+  if(teacherDemoMode)throw new Error('Open the live classroom to use account services.');
   if(method!=='GET')updateSyncStatus('saving');
   const response=await fetch('/api'+path,{method,credentials:'same-origin',headers:body===undefined?{}:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});
   let result;try{result=await response.json();}catch{throw new Error('Service temporarily unavailable. Please try again.');}
@@ -64,12 +65,13 @@ function workspaceGate(route) {
   if(!classroom.configured||classroom.error&& !classroom.user)return `<main class="container inner" id="main-content" tabindex="-1">${titleBlock('Classroom connection unavailable','Your data has not been replaced with sample records. Please try again shortly.')}${action('Try again','cloud-retry','outline')}</main>`;
   if(!classroom.user)return authPage(teacherRoute(route)||['setup','invite'].includes(route));
   if(['setup','invite'].includes(route))return `<main class="container inner" id="main-content" tabindex="-1">${titleBlock('Activate teacher access','This link grants teacher access to the account you are currently signed in to.')}<section class="card padded auth-panel"><p data-user-content>${esc(classroom.user.email)}</p><p>Use this page only if you received this setup or invitation link from the school owner.</p>${action('Activate teacher access','cloud-claim')}</section></main>`;
-  if(teacherRoute(route)&&classroom.user.role!=='teacher')return `<main class="container inner" id="main-content" tabindex="-1">${titleBlock('Teacher access required','Student accounts cannot open teaching records or change course messages.')}<section class="card padded auth-panel"><p>Ask an existing teacher for a teacher invitation link.</p><div class="modal-actions">${link('Student edition','#dashboard','outline')}${action('Use another account','cloud-signout','outline')}</div></section></main>`;
+  if(teacherRoute(route)&&classroom.user.role!=='teacher')return `<main class="container inner" id="main-content" tabindex="-1">${titleBlock('Teacher access required','Student accounts cannot open teaching records or change course messages.')}${teacherDemoEntry()}<section class="card padded auth-panel"><p>Ask an existing teacher for a teacher invitation link.</p><div class="modal-actions">${link('Student edition','#dashboard','outline')}${action('Use another account','cloud-signout','outline')}</div></section></main>`;
   return null;
 }
 function authPage(teacher=false) {
   const signup=authMode==='signup';
-  return `<main class="container inner auth-page" id="main-content" tabindex="-1">${crumb(teacher?'Teacher edition':'Student edition')}${titleBlock(signup?'Create your account':teacher?'Teacher sign in':'Student sign in','Sign in on any device to continue with your saved progress.')}
+  const offerDemo=teacher&&teacherRoute(currentRoute());
+  return `<main class="container inner auth-page" id="main-content" tabindex="-1">${crumb(teacher?'Teacher edition':'Student edition')}${titleBlock(signup?'Create your account':teacher?'Teacher edition':'Student sign in',offerDemo&&!signup?'Explore the demo or sign in to manage your classroom.':'Sign in on any device to continue with your saved progress.')}${offerDemo?teacherDemoEntry():''}
     <section class="card padded auth-panel"><div class="panel-title">${tile(teacher?'briefcase':'book')}<div><h2>${teacher?'Teacher edition':'Student edition'}</h2><p>Teacher access is granted by a setup or invitation link.</p></div></div><form id="cloud-auth-form" class="dialog-form">${signup?'<div class="field"><label for="auth-name">Display name</label><input id="auth-name" name="name" class="input" maxlength="40" autocomplete="name" required></div>':''}<div class="field"><label for="auth-email">Email address</label><input id="auth-email" name="email" type="email" class="input" autocomplete="email" maxlength="254" required></div><div class="field"><label for="auth-password">Password</label><input id="auth-password" name="password" type="password" class="input" minlength="12" maxlength="128" autocomplete="${signup?'new-password':'current-password'}" required></div><p class="fineprint">Use at least 12 characters. Passwords are never stored in the browser.</p><p id="auth-feedback" class="form-feedback" role="alert"></p>${submitButton(signup?'Create account':'Sign in')}</form><div class="auth-switch"><p>${signup?'Already have an account?':'New to WeCert?'}</p>${action(signup?'Sign in instead':'Create account','cloud-auth-mode','outline compact')}</div><p class="fineprint">New accounts start as students. Choosing Teacher edition does not grant teacher permissions.</p></section></main>`;
 }
 function showAccountProfile() {
@@ -118,7 +120,8 @@ function showCloudError(error) {
   const target=document.querySelector('#auth-feedback');if(target)target.textContent=t(error.message);else note(error.message||'Request failed');
 }
 async function initializeClassroom() {
-  if(location.hostname.endsWith('.github.io')){location.replace(classroomOrigin+'/'+location.hash);return;}
+  if(location.hostname.endsWith('.github.io')){location.replace(classroomOrigin+'/'+(teacherDemoMode?'?demo=teacher':'')+location.hash);return;}
+  if(teacherDemoMode){classroom.initializing=false;classroom.enabled=false;classroom.configured=false;classroom.user=null;classroom.status='demo';if(!location.hash)history.replaceState(null,'',teacherDemoHref);render();return;}
   try {
     const response=await fetch('/api/runtime',{cache:'no-store'});
     if(!response.ok)throw new Error('API unavailable');

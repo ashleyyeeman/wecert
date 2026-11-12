@@ -1,5 +1,9 @@
 'use strict';
 
+const teacherDemoMode=typeof location!=='undefined'&&new URLSearchParams(location.search).get('demo')==='teacher';
+const teacherDemoHref='?demo=teacher#teacher';
+const liveTeacherHref=()=>location.pathname+'#teacher';
+
 function defaultTeacherState() {
   return {
     name:'Jamie Lee',announcements:[],lessonNotes:{},learnerNotes:{},

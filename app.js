@@ -67,7 +67,7 @@ function homeRegistration() {
     </section>`;
 }
 function home() {
-  return `<main class="container home" id="main-content" tabindex="-1"><section class="workspace-entry" aria-label="Choose your workspace"><div><strong>Choose your workspace</strong><p>Learn as a student or manage teaching.</p></div><a class="workspace-choice" href="#dashboard">${tile('book')}<span><strong>Student edition</strong><small>Courses, practice & career support</small></span>${arrow()}</a><a class="workspace-choice teacher-choice" href="#teacher">${tile('briefcase','blue')}<span><strong>Teacher edition</strong><small>Courses, progress & learner questions</small></span>${arrow()}</a></section><p class="workspace-entry-note">${classroom.enabled?'Students and teachers use separate accounts. Your progress is available across devices.':'Demo workspaces share data in this browser.'}</p><div class="home-grid">
+  return `<main class="container home" id="main-content" tabindex="-1"><section class="workspace-entry" aria-label="Choose your workspace"><div><strong>Choose your workspace</strong><p>Learn as a student or manage teaching.</p></div><a class="workspace-choice" href="#dashboard">${tile('book')}<span><strong>Student edition</strong><small>Courses, practice & career support</small></span>${arrow()}</a><a class="workspace-choice teacher-choice" href="#teacher">${tile('briefcase','blue')}<span><strong>Teacher edition</strong><small>Courses, progress & learner questions</small></span>${arrow()}</a></section><div class="workspace-entry-note"><p>${classroom.enabled?'Students and teachers use separate accounts. Your progress is available across devices.':'Demo workspaces share data in this browser.'}</p>${!teacherDemoMode?`<a class="text-link" href="${teacherDemoHref}">Teacher demo · No sign-in required ${arrow()}</a>`:''}</div><div class="home-grid">
     <section class="hero"><div class="hero-picture"></div><div class="hero-copy">
       <div class="hero-kicker"><i></i> Vocational training in Hong Kong</div>
       <h1>Build skills for your<br>next career move.</h1>
@@ -183,7 +183,7 @@ function quiz() {
 function render(moveFocus=false) {
   const route = currentRoute();
   const views = {home,courses:catalog,course:()=>courseDetail(getCourse(subroute())),assessment,dashboard,lesson:lessonPage,about,proposal,resources,teacher:teacherOverview,'teacher-courses':teacherCourses,'teacher-course':teacherCourse,'teacher-learners':teacherLearnerList,'teacher-learner':teacherLearner,'teacher-inbox':teacherInbox};
-  app.innerHTML = header(route) + (workspaceGate(route) || (Object.hasOwn(views,route) ? views[route]() : notFound())) + footer();
+  app.innerHTML = header(route) + teacherDemoBanner() + (workspaceGate(route) || (Object.hasOwn(views,route) ? views[route]() : notFound())) + footer();
   viewHasUnsavedChanges=false;
   const heading = document.querySelector('main h1');
   document.title = route === 'home' ? 'WeCert | Vocational Training & Career Support' : (heading?.textContent.trim() || 'Page') + ' | WeCert';

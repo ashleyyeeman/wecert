@@ -12,6 +12,12 @@ The homepage offers **Student edition** and **Teacher edition**. The online clas
 - Student questions and replies are scoped to that student's account. Private notes are scoped to the teacher who wrote them and are never returned by student APIs.
 - Notes, announcements and responses refresh on navigation and while an idle workspace is open. Unsaved form text is preserved during language changes and background refreshes.
 
+## Teacher demonstration
+
+Open https://wecert-wheat.vercel.app/?demo=teacher#teacher for the public teacher demonstration, with no account required. Links are available on the homepage and teacher sign-in page. It includes fictional learners, sample questions, local replies, announcements and lesson guidance, plus a student preview.
+
+Demo records use their own browser storage key. The demo does not load account sessions or call classroom APIs, even when a real account is signed in in another tab. Resetting it clears only these demo records. The banner identifies the demonstration and links back to the live teacher sign-in; actual teaching records continue to require server-authorised teacher access.
+
 ## Authentication and data
 
 The backend uses Hono, Better Auth and Neon Postgres. Sessions use HttpOnly cookies, with Secure cookies on HTTPS. Better Auth handles password hashing and authentication rate limits. Application mutations check their origin, validate inputs and use parameterised SQL. Learner-state writes use revision checks; authoritative quiz results and teaching records cannot be supplied through the learner-state API.
