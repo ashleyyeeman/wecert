@@ -1,0 +1,25 @@
+{
+  "name": "wecert",
+  "version": "1.0.0",
+  "description": "WeCert vocational training and career support demo for Hong Kong learners.",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node --test tests/domain.test.cjs",
+    "test:browser": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashleyyeeman/wecert.git"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ashleyyeeman/wecert/issues"
+  },
+  "homepage": "https://github.com/ashleyyeeman/wecert#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  },
+  "private": true
+}
