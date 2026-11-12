@@ -65,7 +65,7 @@ function localize(root=document.body) {
   const walker = document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    if (!node.parentElement || node.parentElement.closest('script,style,textarea,[data-i18n-skip],[data-user-content],.account-name,.avatar')) continue;
+    if (!node.parentElement || node.parentElement.closest('script,style,textarea,[data-i18n-skip],[data-user-content],[data-localized-time],.account-name,.avatar')) continue;
     restoreOrTranslate(node,textSources,()=>node.nodeValue,value=>{node.nodeValue=value;});
   }
   for (const el of root.querySelectorAll('[aria-label],[placeholder],[alt]')) {
@@ -81,6 +81,10 @@ function localize(root=document.body) {
       if (current !== rendered) el.setAttribute(name,rendered);
       sources[name]={source,rendered};
     }
+  }
+  for (const time of root.querySelectorAll('time[data-localized-time]')) {
+    const date=new Date(time.getAttribute('datetime'));
+    if(!Number.isNaN(date.getTime()))time.textContent=new Intl.DateTimeFormat(language==='en'?'en-HK':language==='zh-Hans'?'zh-Hans-CN':'zh-Hant-HK',{dateStyle:'medium',timeStyle:'short'}).format(date);
   }
   for (const button of document.querySelectorAll('[data-language]')) button.setAttribute('aria-pressed',String(button.dataset.language===language));
   if (document.title !== titleRendered) titleSource = document.title;

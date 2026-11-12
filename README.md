@@ -1,64 +1,81 @@
 # WeCert
 
-A classroom prototype with English, Traditional Chinese and Simplified Chinese interfaces of affordable vocational training and career support for Hong Kong learners. The WeCert name and original deep green / mint visual style are retained. Use the **繁**, **简** and **ENG** buttons to switch languages; the selected language is remembered in this browser. Switching preserves unfinished forms, questions and open-dialog answers.
+WeCert now includes a real account-based classroom for students and teachers, while retaining the existing green/mint design, course content and English / Traditional Chinese / Simplified Chinese interface.
 
-See [the original recommendation audit](IMPROVEMENT-AUDIT.md) for a point-by-point completion record and the separate operational-backend roadmap.
+The homepage offers **Student edition** and **Teacher edition**. The online classroom is hosted at https://wecert-wheat.vercel.app/; the GitHub Pages entry redirects there so authentication cookies and API requests stay on the same origin.
 
-## Try the demo
+## Student and teacher features
 
-Serve this directory with `python3 -m http.server 8000`, then open http://localhost:8000. There is no build step or runtime package dependency. GitHub Pages can serve the repository root directly.
+- Students register and sign in with email and a password of at least 12 characters. Learning plans, course progress, assessment profiles, questions and feedback persist across devices.
+- Teachers can inspect actual learner progress, reply to questions, publish/edit/archive course announcements, write lesson guidance, keep private teaching notes and create single-use teacher invitation links.
+- Student registration always creates a student. A URL choice, browser state or request body cannot grant teacher access. Every teacher API checks the authenticated account's database role.
+- Student questions and replies are scoped to that student's account. Private notes are scoped to the teacher who wrote them and are never returned by student APIs.
+- Notes, announcements and responses refresh on navigation and while an idle workspace is open. Unsaved form text is preserved during language changes and background refreshes.
 
-- **Assessment:** profile → skills and goal → four goal-specific scenarios → evidence and an explained learning path. Budget, study format, weekly hours, all required timetable slots and prerequisites constrain matches. Hybrid courses requiring evening and weekend attendance must fit both; learners can select additional available times. Education and experience inform support suggestions, not eligibility for beginner courses.
-- **Complete representative routes:** Spreadsheet Essentials (10 lessons), Basic Office Digital Literacy (3 lessons) and introductory Japanese (3 lessons). Each has its own guide, practice, three-question knowledge check, checklist and saved progress. Other courses are explicitly previews.
-- **Shareable lessons:** `#lesson/japanese/2` identifies the course and lesson. Old numeric `#lesson/7` links deterministically open the original spreadsheet course. Invalid lessons show a recovery page.
-- **Career dashboard:** next action, personal pathway, course switching, sample career support, course-specific placement eligibility and illustrative income/employment follow-ups at 3, 6 and 12 months. Zero baseline income has no percentage IIAE.
-- **Free resources:** accessible without enrolment or budget; funding enquiries are local examples only.
-- **About / Project Proposal:** learner information is separated from original financial assumptions. Course fees are total fees, while the HK$2,000 monthly customer revenue assumption is clearly unvalidated. Forecasts are not actual results.
+## Authentication and data
 
-## Files
+The backend uses Hono, Better Auth and Neon Postgres. Sessions use HttpOnly cookies, with Secure cookies on HTTPS. Better Auth handles password hashing and authentication rate limits. Application mutations check their origin, validate inputs and use parameterised SQL. Learner-state writes use revision checks; authoritative quiz results and teaching records cannot be supplied through the learner-state API.
 
-| File | Purpose |
-| --- | --- |
-| `i18n.js` / `translations.js` | In-place UI translation, language persistence and static catalogues |
-| `locales/zh-Hant.tsv` | Translation source; Simplified Chinese is generated with OpenCC |
-| `course-data.js` | Course catalogue, schedules, curricula, knowledge checks |
-| `assessment.js` | Scenario questions, evidence and matching rules |
-| `storage.js` | Defaults and migration from the original browser data |
-| `assessment-views.js` | Assessment forms and results |
-| `learning-views.js` | Dashboard, lessons and impact records |
-| `information-views.js` | About, free resources and proposal |
-| `app.js` | Shared UI helpers, catalogue, routing and events |
-| `style.css` | Original palette with responsive and touch improvements |
+Production uses the `public` database schema and a pooled connection. Development uses `wecert_dev` and the unpooled Neon connection so its startup `search_path` stays separate from production. The optional Neon Auth variables created by the integration are not used; Better Auth owns this application's authentication tables.
 
-## Verification
+The first teacher is activated with a private, single-use setup link delivered separately to the project owner. It is not committed to this repository. Subsequent teachers join through authenticated teachers' invitations, which expire after three days and cannot be reused. No teacher passwords or shared default accounts are shipped.
 
-Use Node 22+ and Python 3:
+## Development
+
+Use Node 24+, Python 3 and npm.
 
 ```sh
 npm ci
-npm test
-npx playwright install chromium
-npm run test:browser
 ```
 
-To use an existing Chromium installation:
+Link the existing Vercel project and pull **Development** variables into the ignored `.env.local` file. The variables are listed in `.env.example`; never commit actual values. Set `APP_ORIGIN=http://localhost:3000` and `DATABASE_SCHEMA=wecert_dev`. A pulled `DATABASE_URL_UNPOOLED` is preferred for this isolated development schema.
+
+After configuration is present:
 
 ```sh
+npm run db:migrate
+node scripts/build-public.cjs
+npm run dev
+```
+
+Open http://localhost:3000. `npm run build` prepares the public files and runs idempotent database migrations using the deployment's own environment. Server code, `.env` files, tests and source-control metadata are excluded from the public asset directory.
+
+For frontend-only work, `npm start` serves the root at port 8000. Without an API it runs an explicitly labelled local demonstration with fictional classmates. That mode is not used by the hosted classroom. Existing browser-only demo data is retained locally and is not silently attached to a new real account or uploaded as real learner records.
+
+## Verification
+
+```sh
+npm test
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:browser
 ```
 
-The tests cover hard matching constraints, prerequisite evidence, old-data migration, Japanese/spreadsheet isolation, course deep links, completed office-course placement eligibility, zero-budget resources, persisted income follow-ups and mobile overflow. Language tests cover the exact button labels, remembered preferences, Traditional/Simplified Chinese course search, canonical form values, multilingual assessment and quiz submission, unchanged user content and layouts at 320, 390, 768 and 1440 pixels. Screenshots and reports are ignored by Git.
+The browser suite covers the original learner flows, all three languages, homepage role entries and teacher layouts at 320, 390, 768 and 1440 pixels.
 
-## Prototype limits and operational roadmap
+With the local server running and the isolated `wecert_dev` schema configured:
 
-All user-entered data stays in this browser under the original storage key, `skillbridge-hk-demo-v1`. Existing course progress is retained; old global exam and quiz values migrate to spreadsheets only. An old profile-only assessment must complete the new scenarios before it is marked assessed. Use Demo privacy → Reset demo data to clear local records.
+```sh
+npm run test:classroom
+```
 
-No account, payment, staff message, real appointment, formal qualification, subsidy or job placement is created. Tutor replies are scripted from the current lesson; they are not live AI. Course dates, prices, venues, learner journeys and impact records are illustrative. The Japanese text route is not a listening assessment or a full JLPT preparation course.
+This real-database flow uses independent browser contexts for a teacher, a student, another student and a second device. It checks role escalation rejection, owner setup, cross-device progress and replies, course-scoped announcements, archiving, guidance, private notes, one-time invitations and sign-out. It refuses to run against the production schema and cleans up its generated fixture accounts. Credentials and invitation tokens are not printed.
 
-Before serving real learners: validate curricula and qualification claims; confirm partners, funding and service arrangements; implement authenticated cross-device storage, teacher administration and real bookings; add reviewed course-grounded AI; and validate the multilingual interface with learners. The interface now supports English, Traditional Chinese and Simplified Chinese as requested. Course teaching language is separate from interface language. Before real service delivery, validate the translations with learners and instructors.
+## File map
 
-## Updating translations
+| Files | Purpose |
+| --- | --- |
+| `server.mjs`, `backend/` | Authentication, authorised APIs, validation and database schema |
+| `remote.js` | Account UI, sync state and remote API integration |
+| `teacher-data.js`, `teacher-views.js`, `teacher-actions.js` | Teacher management and offline demonstration |
+| `course-data.js`, `assessment.js` | Shared course catalogue, curricula and recommendation logic |
+| `storage.js` | Existing offline data migration |
+| `assessment-views.js`, `learning-views.js`, `information-views.js`, `app.js` | Learner pages, public information and routing |
+| `i18n.js`, `translations.js`, `locales/zh-Hant.tsv` | Interface translation and language preference |
+| `IMPROVEMENT-AUDIT.md` | Original recommendations and completion history |
 
-Edit the tab-separated English → Traditional Chinese messages in `locales/zh-Hant.tsv`. Generate both browser catalogues with `python scripts/build-locales.py` after installing the development-only `opencc-python-reimplemented` package. `translations.js` is checked in, so no Python package or translation service is required to serve the site.
+## Remaining service limits
 
-English course identifiers, URLs and stored enum values stay unchanged across languages. User-entered names, questions and enquiries are never translated. Japanese examples, software names and spreadsheet formulas retain their original wording where needed for the exercise.
+The representative spreadsheet, office and introductory Japanese courses are classroom content; other courses remain previews. No payment, real appointment, employer referral, subsidy or formal qualification is provided. Income records and financial assumptions remain illustrative. The sample tutor gives scripted lesson guidance, not live AI. Account email verification and email-based password recovery are not configured; signed-in users can change their password and revoke other sessions. Those email workflows require a mail-delivery service before broad public enrolment.
+
+## Translation updates
+
+Edit `locales/zh-Hant.tsv`, then run `python scripts/build-locales.py` with the development-only `opencc-python-reimplemented` package installed. The generated `translations.js` is checked in; there is no runtime translation service. User-entered names, questions, replies and announcements are preserved exactly. Japanese examples and spreadsheet formulas retain their original wording where needed.

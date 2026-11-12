@@ -1,0 +1,70 @@
+'use strict';
+
+let teacherInboxFilter = {course:'all',status:'unanswered'};
+const learnerBadge = learner => remoteActive()?'Student account':learner.current?'Current learner':'Sample learner';
+const questionBadge = question => remoteActive()?'Student account':question.source==='current'?'Current learner':'Sample learner';
+const teacherNavItems = [['home','Home'],['teacher','Teaching overview'],['teacher-courses','Course management'],['teacher-learners','Learner progress'],['teacher-inbox','Question inbox']];
+const courseName = id => id==='all'?'All courses':getCourse(id)?.name||'Course preview';
+const teacherCourseOptions = selected => ['all',...courses.map(c=>c.id)].map(id=>`<option value="${id}" ${selected===id?'selected':''}>${esc(courseName(id))}</option>`).join('');
+function localTime(iso) {
+  return `<time data-localized-time datetime="${esc(iso)}">${esc(iso?.slice(0,10)||'')}</time>`;
+}
+function teacherShell(title,description,body,aside='') {
+  return `<main class="container inner teacher-workspace" id="main-content" tabindex="-1">${crumb('Teacher edition')}${titleBlock(title,description,`<div class="workspace-tools">${aside}${remoteActive()?syncIndicator()+action('Refresh classroom','cloud-refresh','outline compact'):''}</div>`)}
+    <div class="workspace-notice">${icon('shield',19)}<p>${remoteActive()?'<strong>Teacher workspace.</strong> Class records and messages sync across devices.':'<strong>Interactive teacher demo.</strong> Saved in this browser. Use sample data; there is no sign-in or cross-device classroom.'}</p>${link('Student edition','#dashboard','outline compact')}</div>${body}</main>`;
+}
+function teacherOverview() {
+  const learners = teacherLearners();
+  const pending = teacherQuestions().filter(q=>!q.teacherReply);
+  const published = state.teacher.announcements.filter(a=>a.published);
+  const stats = [['people','Learners',learners.length,remoteActive()?'Authenticated student accounts':'Current learner + illustrative classmates'],['book','Teaching courses',courses.length,'3 complete routes; other courses are previews'],['chat','Awaiting a reply',pending.length,'Teacher questions only'],['mail','Published announcements',published.length,'Visible in the student workspace']];
+  return teacherShell('Teaching overview','Keep track of learning and help learners take their next step.',`
+    <section class="dashboard-stats">${stats.map(([i,title,n,desc])=>`<article class="card stat">${tile(i)}<div><span>${title}</span><strong>${n}</strong><small>${desc}</small></div></article>`).join('')}</section>
+    <div class="teacher-columns"><section class="card padded"><div class="section-heading"><div><h2>Questions needing attention</h2><p>${remoteActive()?'Reply in the inbox; each learner sees their own answer in the lesson.':'Reply in the inbox; the current learner sees your answer in the lesson.'}</p></div>${link('Open inbox','#teacher-inbox','outline compact')}</div>${pending.length?pending.slice(0,3).map(q=>`<article class="teacher-attention"><div>${badge(questionBadge(q),q.source==='current'?'mint':'sand')}<strong data-user-content>${esc(q.authorName)}</strong></div><p>${esc(courseName(q.course))} · Lesson ${q.lesson}</p><p ${q.source==='sample'?'':'data-user-content'}>${esc(q.question)}</p>${action('Reply','teacher-reply','outline compact','',`data-id="${esc(q.id)}"`)}</article>`).join(''):'<div class="teacher-empty"><h3>All caught up</h3><p>New teacher questions will appear here.</p></div>'}</section>
+    <section class="card padded"><h2>Publish an announcement</h2><p>Share a message with one course or all courses.</p>${announcementForm()}</section></div>
+    <section class="card padded teacher-section"><h2>Course announcements</h2>${teacherAnnouncementList()}</section>`,remoteActive()?action('Invite a teacher','cloud-invite','outline'): '');
+}
+function announcementForm(announcement={}) {
+  return `<form id="teacher-announcement-form" class="dialog-form" data-id="${esc(announcement.id||'')}"><div class="field"><label for="announcement-course">Audience</label><select class="input" id="announcement-course" name="course">${teacherCourseOptions(announcement.course||'all')}</select></div><div class="field"><label for="announcement-title">Announcement title</label><input id="announcement-title" name="title" class="input" maxlength="80" value="${esc(announcement.title||'')}" required></div><div class="field"><label for="announcement-body">Announcement message</label><textarea id="announcement-body" name="body" class="input" rows="4" maxlength="1200" required>${esc(announcement.body||'')}</textarea></div>${submitButton(announcement.id?'Save announcement':'Publish announcement')}</form>`;
+}
+function teacherAnnouncementList(course='all') {
+  const list=state.teacher.announcements.filter(a=>course==='all'||a.course===course||a.course==='all');
+  return list.length?`<div class="teacher-announcements">${[...list].reverse().map(a=>`<article class="teacher-announcement"><div class="section-heading"><div><div class="teacher-meta">${badge(a.published?'Published':'Archived',a.published?'mint':'sand')}<span>${esc(courseName(a.course))}</span></div><h3 data-user-content>${esc(a.title)}</h3></div>${localTime(a.updatedAt||a.createdAt)}</div><p class="user-copy" data-user-content>${esc(a.body)}</p><div class="modal-actions">${action('Edit announcement','teacher-edit-announcement','outline compact','',`data-id="${esc(a.id)}"`)}${action(a.published?'Archive announcement':'Publish again','teacher-toggle-announcement','outline compact','',`data-id="${esc(a.id)}"`)}</div></article>`).join('')}</div>`:'<div class="teacher-empty"><p>No announcements yet. Publish your first message above.</p></div>';
+}
+function studentAnnouncements(id) {
+  const announcements=visibleCourseAnnouncements(id);
+  return announcements.length?`<section class="card padded student-announcements"><div class="panel-title">${tile('mail','blue')}<div><h2>Course announcements</h2><p>${remoteActive()?'Messages from your teachers.':'Messages from the teacher workspace in this browser.'}</p></div></div>${[...announcements].reverse().map(a=>`<article><div class="section-heading"><h3 data-user-content>${esc(a.title)}</h3>${localTime(a.updatedAt||a.createdAt)}</div><p class="user-copy" data-user-content>${esc(a.body)}</p></article>`).join('')}</section>`:'';
+}
+function teacherCourses() {
+  return teacherShell('Course management','Review course progress, share guidance and keep course messages together.',`<div class="catalog-grid">${courses.map(c=>{
+    const learners=teacherLearners().filter(l=>Object.hasOwn(l.courses,c.id));
+    const average=learners.length?Math.round(learners.reduce((sum,l)=>sum+learnerCourseProgress(l,c.id),0)/learners.length):0;
+    return `<article class="card padded teacher-course-card">${tile(c.icon,c.tone)}${badge(c.demo?'Complete demo route':'Course preview',c.demo?'mint':'sand')}<h2>${c.name}</h2><p>${c.about}</p><dl><dt>Enrolled learners</dt><dd>${learners.length}</dd><dt>Average lesson progress</dt><dd>${average}%</dd></dl>${bar(average)}${link('Manage course','#teacher-course/'+c.id,'outline',arrow())}</article>`;
+  }).join('')}</div>`);
+}
+function teacherCourse() {
+  const c=getCourse(subroute());if(!c)return notFound();
+  const learners=teacherLearners().filter(l=>Object.hasOwn(l.courses,c.id));
+  return teacherShell(c.name,'Manage this course without changing the learner’s recorded progress.',`
+    <div class="teacher-columns"><section class="card padded"><div class="section-heading"><h2>Lessons & teacher guidance</h2>${badge(c.demo?'Complete demo route':'Course preview')}</div><p>Supplement the lesson with a teacher note. Saved guidance appears in the student lesson.</p>${courseLessons(c).map((u,i)=>`<article class="teacher-lesson-row"><div><span class="lesson-index">Lesson ${i+1}</span><h3>${u.title}</h3><p>${u.task}</p>${state.teacher.lessonNotes[c.id]?.[i+1]?badge('Guidance added') : ''}</div>${action('Edit guidance','teacher-guidance','outline compact','',`data-course="${c.id}" data-lesson="${i+1}"`)}</article>`).join('')}</section>
+    <section class="card padded"><h2>Enrolled learners</h2><p>${remoteActive()?'Progress is loaded from enrolled student accounts.':'Progress combines this browser’s learner with clearly marked sample classmates.'}</p>${learners.length?learners.map(l=>`<article class="teacher-attention"><div><strong data-user-content>${esc(l.name)}</strong>${badge(learnerBadge(l),l.current?'mint':'sand')}</div>${bar(learnerCourseProgress(l,c.id))}<p>${learnerCourseProgress(l,c.id)}% · ${l.quizByCourse[c.id]?'Knowledge check passed':'Knowledge check not passed'}</p>${link('View learner','#teacher-learner/'+l.id,'outline compact')}</article>`).join(''):'<p class="teacher-empty">No enrolments in this demo yet.</p>'}</section></div><section class="card padded teacher-section"><div class="section-heading"><h2>Course announcements</h2>${action('New announcement','teacher-new-announcement','outline compact','',`data-course="${c.id}"`)}</div>${teacherAnnouncementList(c.id)}</section>`,link('Back to courses','#teacher-courses','outline'));
+}
+function teacherLearnerList() {
+  return teacherShell('Learner progress',remoteActive()?'Review individual progress and keep notes visible only to your teacher account.':'Review individual progress and keep private teaching notes in this browser.',`<section class="card padded"><p class="fineprint">${remoteActive()?'Only registered student accounts are listed here.':'The current learner is live browser data. Other names and progress are illustrative.'}</p><div class="teacher-roster">${teacherLearners().map(l=>{
+    const ids=Object.keys(l.courses).filter(id=>getCourse(id));
+    return `<article><div class="teacher-learner-name">${tile('people')}<div><h2 data-user-content>${esc(l.name)}</h2>${badge(learnerBadge(l),l.current?'mint':'sand')}</div></div><div class="teacher-roster-courses">${ids.map(id=>`<div><span>${esc(courseName(id))}</span><strong>${learnerCourseProgress(l,id)}%</strong>${bar(learnerCourseProgress(l,id))}</div>`).join('')||'<p>No courses yet.</p>'}</div>${link('View learner','#teacher-learner/'+l.id,'outline',arrow())}</article>`;
+  }).join('')}</div></section>`);
+}
+function teacherLearner() {
+  const learner=teacherLearners().find(l=>l.id===subroute());if(!learner)return notFound();
+  return teacherShell('Learner detail','Review learning progress and add a teaching note.',`
+    <section class="card padded"><div class="section-heading"><h2 data-user-content>${esc(learner.name)}</h2>${badge(learnerBadge(learner),learner.current?'mint':'sand')}</div><div class="table-scroll"><table><thead><tr><th>Course</th><th>Lesson progress</th><th>Knowledge check</th></tr></thead><tbody>${Object.keys(learner.courses).filter(id=>getCourse(id)).map(id=>`<tr><td>${esc(courseName(id))}${!getCourse(id).demo?badge('Course preview','sand'):''}</td><td>${learnerCourseProgress(learner,id)}%</td><td>${getCourse(id).demo?(learner.quizByCourse[id]?'Passed':'Not passed'):'Preview only'}</td></tr>`).join('')}</tbody></table></div>${learner.current||remoteActive()?`<p><strong>Career goal</strong> · ${esc(learner.goal||state.profile.goal)}</p><p><strong>Assessment</strong> · ${(learner.assessed??state.assessed)?'Completed':'Not completed'}</p>`:''}</section>
+    <section class="card padded teacher-section"><h2>Private teaching note</h2><p>This note stays in the teacher workspace and is not displayed in the student lesson.</p><form id="teacher-learner-note-form" class="dialog-form" data-learner="${learner.id}"><div class="field"><label for="learner-note">Teaching note</label><textarea class="input" id="learner-note" name="note" rows="4" maxlength="1200">${esc(state.teacher.learnerNotes[learner.id]||'')}</textarea></div>${submitButton('Save teaching note')}</form></section>`,link('Back to learners','#teacher-learners','outline'));
+}
+function teacherInbox() {
+  const all=teacherQuestions();
+  const list=all.filter(q=>(teacherInboxFilter.course==='all'||q.course===teacherInboxFilter.course)&&(teacherInboxFilter.status==='all'||(teacherInboxFilter.status==='unanswered'?!q.teacherReply:Boolean(q.teacherReply))));
+  return teacherShell('Question inbox','Read lesson questions and reply to the learner who asked.',`
+    <div class="card teacher-inbox-filters"><div class="field"><label for="teacher-inbox-course">Course</label><select class="input" id="teacher-inbox-course">${teacherCourseOptions(teacherInboxFilter.course)}</select></div><div class="field"><label for="teacher-inbox-status">Reply status</label><select id="teacher-inbox-status" class="input">${[['unanswered','Awaiting reply'],['answered','Answered'],['all','All questions']].map(([id,label])=>`<option value="${id}" ${teacherInboxFilter.status===id?'selected':''}>${label}</option>`).join('')}</select></div></div>
+    <section class="teacher-question-list">${list.length?list.map(q=>`<article class="card padded teacher-question"><div class="section-heading"><div class="teacher-meta">${badge(questionBadge(q),q.source==='current'?'mint':'sand')}${badge(q.teacherReply?'Answered':'Awaiting reply',q.teacherReply?'mint':'sand')}</div>${q.createdAt?localTime(q.createdAt):''}</div><h2 data-user-content>${esc(q.authorName)}</h2><p>${esc(courseName(q.course))} · Lesson ${q.lesson}</p><p class="teacher-question-body user-copy" ${q.source==='sample'?'':'data-user-content'}>${esc(q.question)}</p>${q.teacherReply?`<div class="teacher-saved-reply"><strong>Teacher reply</strong><p data-user-content class="user-copy">${esc(q.teacherReply.body)}</p><small data-user-content>${esc(q.teacherReply.name)}</small> · ${localTime(q.teacherReply.at)}</div>`:''}<div class="modal-actions">${action(q.teacherReply?'Edit reply':'Reply','teacher-reply','outline','',`data-id="${esc(q.id)}"`)}${link('Open lesson',lessonHref(q.course,q.lesson),'plain-button')}</div></article>`).join(''):'<div class="card padded teacher-empty"><h2>No questions in this view</h2><p>Try another course or status. Student questions sent to Teacher appear here.</p></div>'}</section>`);
+}

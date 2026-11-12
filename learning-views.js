@@ -1,6 +1,7 @@
 'use strict';
 
 function dashboard() {
+  if(remoteActive()&&!Object.keys(state.courses).length)return `<main class="container inner" id="main-content" tabindex="-1">${crumb('Career Dashboard')}${titleBlock('Your learning starts here','Choose a course or assess your skills to build your learning plan.',syncIndicator())}<section class="card padded"><h2>No courses in your plan yet</h2><p>Start with the assessment or explore the course catalogue.</p><div class="modal-actions">${link('Start free assessment','#assessment')}${link('Browse courses','#courses','outline')}</div></section></main>`;
   const selected = getCourse(state.selectedCourse) || getCourse('spreadsheets');
   const units = courseLessons(selected);
   const completed = state.courses[selected.id] || [];
@@ -21,11 +22,11 @@ function dashboard() {
     ['target','mint','Long-term goal',state.profile.goal === 'Office administration' ? 'Administrative assistant' : state.profile.goal,'A goal to explore, not a job guarantee']
   ];
   const stage = !state.assessed?0:!selected.demo||!learned?1:!passed?2:3;
-  return `<main class="container inner dashboard" id="main-content" tabindex="-1">${crumb('Career Dashboard')}${titleBlock('Personal Career Dashboard',`Welcome back, ${esc(state.name.split(/\s+/)[0])}. Pick up where you left off.`,action('Switch course','plan','outline',arrow()))}
+  return `<main class="container inner dashboard" id="main-content" tabindex="-1">${crumb('Career Dashboard')}${titleBlock('Personal Career Dashboard',`Welcome back, ${esc(state.name.split(/\s+/)[0])}. Pick up where you left off.`,`<div class="workspace-tools">${syncIndicator()}${action('Switch course','plan','outline',arrow())}${remoteActive()?action('Refresh classroom','cloud-refresh','outline compact'):''}</div>`)}
     <section class="next-step"><div>${badge('Your next step')}<h2>${nextText}</h2><p>${selected.name} · ${selected.demo?'Complete demo route':'Course preview'}</p></div>${nextLink?link(!state.assessed?'Start free assessment':selected.demo?'Continue learning':'Explore courses',nextLink,'light',arrow()):!passed?action('Take knowledge check','quiz','light'):action('Explore career support','book','light')}</section>
     <ol class="personal-path" aria-label="Your career pathway">${['Assessment','Training','Practice & check','Career preparation'].map((label,i)=>`<li class="${i===stage?'current':i<stage?'done':''}" ${i===stage?'aria-current="step"':''}><span>${i<stage?'✓':i+1}</span>${label}</li>`).join('')}</ol>
     ${!state.assessed?`<p class="inline-note">You are exploring a sample learning plan. ${link('Personalise it with the assessment','#assessment','outline compact')}</p>`:''}
-    <section class="dashboard-stats" aria-label="Progress summary">${stats.map(([symbol,tone,label,value,desc])=>`<article class="card stat">${tile(symbol,tone)}<div><span>${label}</span><strong>${esc(value)}</strong><small>${esc(desc)}</small></div></article>`).join('')}</section>
+    ${studentAnnouncements(selected.id)}<section class="dashboard-stats" aria-label="Progress summary">${stats.map(([symbol,tone,label,value,desc])=>`<article class="card stat">${tile(symbol,tone)}<div><span>${label}</span><strong>${esc(value)}</strong><small>${esc(desc)}</small></div></article>`).join('')}</section>
     <div class="dashboard-grid"><section class="card lesson"><div class="lesson-title"><div><h2>${learned?'Review learning':'Continue learning'}</h2><p>${selected.name}</p></div>${badge(selected.demo?(percentage===100?'Lessons completed':'In progress'):'Preview','mint')}</div>
       <div class="lesson-body"><a class="video course-visual ${selected.tone}" href="${lessonHref(selected.id,next)}" aria-label="Open ${esc(selected.name)} lesson ${next}">${icon(selected.icon,58)}<span class="video-play">${icon('play',28)}</span></a>
       <div class="lesson-detail"><div class="lesson-index">${selected.demo?'Lesson':'Preview topic'} ${next} of ${total}</div><h3>${units[next-1].title}</h3><p>${units[next-1].task}</p>${link(learned?'Review lesson':'Resume lesson',lessonHref(selected.id,next),'',icon('play',17))}<div class="lesson-progress">${bar(percentage)}<span>${percentage}%</span></div></div></div>
@@ -50,8 +51,7 @@ function lessonPage() {
   activeLesson = Number(parts[2]);
   if (activeLesson < 1 || activeLesson > units.length) return notFound();
   const ask = parts[3];
-  state.selectedCourse = c.id;
-  save();
+  if(state.selectedCourse!==c.id){state.selectedCourse=c.id;save().catch(showCloudError);}
   const unit = units[activeLesson-1];
   const completed = state.courses[c.id] || [];
   const player = c.id === 'spreadsheets' && activeLesson === 7;
@@ -61,13 +61,13 @@ function lessonPage() {
   <div class="learning-grid"><section class="card padded lesson-page">
     ${!c.demo?'<p class="inline-note"><strong>Course preview</strong> · Full teaching materials and assessment are not yet available.</p>':''}
     ${player ? `<video class="lesson-video" controls playsinline preload="metadata" poster="assets/instructor.jpg" aria-label="Sort and filter your data lesson"><source src="assets/spreadsheet-lesson.mp4" type="video/mp4"><a href="assets/spreadsheet-lesson.mp4">Open the lesson video</a></video>` : `<div class="lesson-cover ${c.tone}" aria-hidden="true">${icon(c.icon,48)}<span>${c.track}</span></div>`}
-    <h2>Lesson guide</h2><p class="lesson-guide">${unit.guide}</p><h2>Practice task</h2><p>${unit.task}</p>
+    ${studentAnnouncements(c.id)}<h2>Lesson guide</h2><p class="lesson-guide">${unit.guide}</p>${state.teacher.lessonNotes[c.id]?.[activeLesson]?`<section class="teacher-guidance"><h2>Teacher guidance</h2><p class="user-copy" data-user-content>${esc(state.teacher.lessonNotes[c.id][activeLesson].body)}</p><small data-user-content>${esc(state.teacher.lessonNotes[c.id][activeLesson].name)}</small></section>`:''}<h2>Practice task</h2><p>${unit.task}</p>
     ${player ? '<details class="inline-note"><summary>Read the video transcript</summary><p>Sort changes the order of your rows. Select the full table, then sort Hours from largest to smallest. Filter hides rows that do not match. Select Open in the Status column to show open tasks only. Clear the filter to see every row again.</p></details>' : ''}
     <div class="lesson-controls">${completed.includes(activeLesson)?badge(c.demo?'Lesson completed':'Preview explored'):action(c.demo?'Mark lesson complete':'Mark preview explored','complete','',icon('check',17))}${activeLesson<units.length?link('Next lesson',lessonHref(c.id,activeLesson+1),'outline',arrow()):c.demo?action('Take knowledge check','quiz','outline',arrow()):link('Explore complete demo routes','#courses','outline')}</div>
-    <section class="lesson-comments"><h2>Lesson questions</h2><p>Sample tutor responses use this course’s guide. This is scripted assistance, not live AI. Teacher questions are stored locally.</p>
+    <section class="lesson-comments"><h2>Lesson questions</h2><p>Sample tutor responses use this course’s guide. Teacher questions and replies are shared with the teacher workspace${remoteActive()?'':' in this browser'}.</p>
     <form id="comment-form"><div class="field"><label for="comment-recipient">Question recipient</label><select class="input" id="comment-recipient" name="recipient">${options(['Sample tutor','Teacher'],ask==='teacher'?'Teacher':'Sample tutor')}</select></div>
     <div class="field"><label for="lesson-question">Your question</label><textarea id="lesson-question" name="question" class="input" placeholder="Which part of this lesson should I practise again?" rows="3" maxlength="350" required></textarea></div><button class="button" type="submit">Save question${arrow()}</button></form>
-    ${savedComments.map(comment=>`<div class="comment"><strong><span data-user-content>${esc(state.name)}</span> → ${esc(comment.recipient)}</strong><p data-user-content>${esc(comment.question)}</p><strong>${comment.recipient==='Teacher'?'Teacher · Local demo status':'Sample tutor · Scripted reply'}</strong><p>${esc(comment.reply)}</p></div>`).join('')}</section>
+    ${savedComments.map(comment=>`<div class="comment"><strong><span data-user-content>${esc(comment.authorName||state.name)}</span> → ${esc(comment.recipient)}</strong><p data-user-content>${esc(comment.question)}</p><strong>${comment.recipient==='Teacher'?(comment.teacherReply?'Teacher reply':'Awaiting teacher reply'):'Sample tutor · Scripted reply'}</strong><p ${comment.teacherReply?'data-user-content':''} class="user-copy">${esc(comment.teacherReply?.body||comment.reply)}</p>${comment.teacherReply?`<small data-user-content>${esc(comment.teacherReply.name)}</small>`:''}</div>`).join('')}</section>
   </section><aside class="card padded curriculum"><h2>Course lessons</h2>${units.map((u,i)=>`<a href="${lessonHref(c.id,i+1)}" ${activeLesson===i+1?'class="current" aria-current="page"':''}><span>${completed.includes(i+1)?icon('check',16):i+1}</span>${u.title}</a>`).join('')}</aside></div></main>`;
 }
 

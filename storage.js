@@ -3,10 +3,10 @@
 // Keep the existing key so returning learners retain their progress.
 const storageKey = 'skillbridge-hk-demo-v1';
 function demoState() {
-  return {version:2,name:'Alex Chan',courses:{spreadsheets:[1,2,3,4,5,6]},
+  return {version:3,name:'Alex Chan',courses:{spreadsheets:[1,2,3,4,5,6]},
     examByCourse:{spreadsheets:[0,1]},quizByCourse:{},profile:structuredClone(sampleProfile),
     assessmentAnswers:[],assessed:false,review:false,comments:[],appointment:null,
-    salary:null,followups:[],interestByCourse:{},selectedCourse:'spreadsheets'};
+    teacher:defaultTeacherState(),salary:null,followups:[],interestByCourse:{},selectedCourse:'spreadsheets'};
 }
 function normaliseState(saved) {
   const fresh = demoState();
@@ -24,13 +24,14 @@ function normaliseState(saved) {
   merged.profile.additionalAvailability = Array.isArray(merged.profile.additionalAvailability) ? merged.profile.additionalAvailability.filter(slot=>studyTimes.includes(slot)) : [];
   merged.profile.skills = Array.isArray(merged.profile.skills) ? merged.profile.skills.filter(s=>skills.includes(s)) : [];
   merged.name = typeof merged.name === 'string' && merged.name.trim() ? merged.name.slice(0,40) : fresh.name;
-  merged.comments = Array.isArray(merged.comments) ? merged.comments.filter(c=>c&&typeof c==='object') : [];
+  merged.comments = Array.isArray(merged.comments) ? merged.comments.filter(c=>c&&typeof c==='object').map((c,i)=>({...c,id:typeof c.id==='string'?c.id:'legacy-question-'+i,authorName:c.authorName||merged.name})) : [];
+  merged.teacher = normaliseTeacherState(saved.teacher);
   merged.followups = Array.isArray(merged.followups) ? merged.followups.filter(f=>f&&[3,6,12].includes(f.month)) : [];
   merged.assessmentAnswers = Array.isArray(merged.assessmentAnswers) ? merged.assessmentAnswers : [];
   merged.assessed = Boolean(merged.assessed && merged.assessmentAnswers.length === 4);
   merged.interestByCourse = saved.interestByCourse || (saved.interest ? {spreadsheets:true} : {});
   delete merged.interest;
-  merged.version=2;
+  merged.version=3;
   delete merged.exam; delete merged.quiz;
   return merged;
 }

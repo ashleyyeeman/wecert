@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "hono",
+  "buildCommand": "npm run build",
+  "regions": ["iad1"],
+  "functions": {
+    "server.mjs": {
+      "includeFiles": "{course-data.js,index.html}",
+      "maxDuration": 60
+    }
+  }
+}

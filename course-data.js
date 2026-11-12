@@ -111,3 +111,6 @@ for (const c of courses) {
 }
 const courseLessons = c => curriculum[c.id] || c.units.map(title=>({title,guide:'This course is a content preview. A full teaching sequence and assessment are still being developed.',task:'Explore the course outline and discuss your learning goals with an adviser.'}));
 const lessonHref = (id,number,ask='') => '#lesson/'+id+'/'+number+(ask?'/'+ask:'');
+
+// The server uses the same catalogue to validate course IDs, lesson progress and quiz answers.
+if(typeof module!=='undefined'&&module.exports)module.exports={courses,courseChecks,courseLessons,sampleProfile,goals,skills,formats};

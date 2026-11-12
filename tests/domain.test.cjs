@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
 const context=vm.createContext({structuredClone,localStorage:{getItem:()=>null}});
-for(const f of ['course-data.js','assessment.js','storage.js']) vm.runInContext(fs.readFileSync(f,'utf8'),context);
+for(const f of ['course-data.js','assessment.js','teacher-data.js','storage.js']) vm.runInContext(fs.readFileSync(f,'utf8'),context);
 vm.runInContext('const state = demoState()',context);
 const run = expr=>JSON.parse(JSON.stringify(vm.runInContext(expr,context)));
 
@@ -52,4 +52,9 @@ test('next-course suggestions honour budget, timetable, career direction and com
   const later=run("nextCourseRecommendation(courses.find(c=>c.id==='spreadsheets'),state)");
   assert.equal(later.course.id,'intermediate');assert.equal(later.ready,false);
   assert.equal(run("nextCourseRecommendation(courses.find(c=>c.id==='spreadsheets'),{...state,courses:{...state.courses,intermediate:[1,2,3]}})"),null);
+});
+
+test('teacher workspace migration retains learner progress and gives old questions stable identities',()=>{
+ const saved=run("normaliseState({name:'Learner',courses:{japanese:[1,2]},comments:[{course:'japanese',lesson:2,recipient:'Teacher',question:'A question'}]})");
+ assert.deepEqual(saved.courses.japanese,[1,2]);assert.equal(saved.comments[0].id,'legacy-question-0');assert.equal(saved.comments[0].authorName,'Learner');assert.equal(saved.teacher.announcements.length,0);
 });

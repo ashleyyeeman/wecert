@@ -30,6 +30,7 @@ const announce = document.querySelector('#announcement');
 let step = 0;
 let filter = {type:'All courses', mode:'Any format', query:''};
 let activeLesson = 7;
+let viewHasUnsavedChanges = false;
 const navItems = [['home','Home'],['courses','Courses'],['assessment','Skills Assessment'],['dashboard','Career Dashboard'],['about','About'],['proposal','Project Proposal']];
 const money = n => 'HK$' + new Intl.NumberFormat('en-HK').format(n);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -41,36 +42,38 @@ const link = (label, href, cls='', end='') => `<a class="button ${cls}" href="${
 const action = (label, name, cls='', end='', data='') => `<button class="button ${cls}" type="button" data-action="${name}" ${data}>${label}${end}</button>`;
 const bar = value => `<div class="progress" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><i style="width:${value}%"></i></div>`;
 const getCourse = id => courses.find(course => course.id === id);
-const save = () => { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch {} };
+const save = () => { if(classroom.enabled&&!classroom.user)return Promise.reject(new Error('Sign in required'));if(remoteActive())return queueStudentSave(state);try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch {}return Promise.resolve(); };
 const currentRoute = () => location.hash.slice(1).split('/')[0] || 'home';
 const subroute = () => location.hash.slice(1).split('/')[1];
 const titleBlock = (title, desc, aside='') => `<div class="section-heading page-title"><div><h1>${title}</h1><p>${desc}</p></div>${aside}</div>`;
 const crumb = (text, base='') => `<div class="breadcrumb"><a href="#home">Home</a>${chevron()}${base}<b>${text}</b></div>`;
 const logo = `<a href="#home" class="logo" aria-label="WeCert home"><img src="assets/bridge.svg" width="37" height="37" alt=""><span>We<b>Cert</b></span></a>`;
 function header(route) {
-  const selected = route === 'course' ? 'courses' : route === 'lesson' ? 'dashboard' : route;
-  return `<header><div class="container navbar">${logo}<nav aria-label="Main navigation">${navItems.map(([id,name]) =>
-    `<a href="#${id}" ${id === selected ? 'class="selected" aria-current="page"' : ''}>${name}</a>`).join('')}</nav>
-    <div class="account">${languageControls()}${state.name === 'Alex Chan' && route === 'home' ?
-      action('Try demo', 'demo', 'compact', arrow()) :
-      `<button class="profile-link" type="button" data-action="profile"><span class="avatar">${esc(state.name.split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase())}</span><span class="account-name">${esc(state.name)}</span>${icon('chev', 15)}</button>`}</div></div></header>`;
+  const teaching=teacherRoute(route);
+  const selected=teaching?(route==='teacher-course'?'teacher-courses':route==='teacher-learner'?'teacher-learners':route):route==='course'?'courses':route==='lesson'?'dashboard':route;
+  const name=classroom.user?(teaching?classroom.user.name:state.name):teaching?state.teacher.name:state.name;
+  return `<header><div class="container navbar">${logo}<nav aria-label="Main navigation">${(teaching?teacherNavItems:navItems).map(([id,label])=>`<a href="#${id}" ${id===selected?'class="selected" aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="account">${languageControls()}${classroom.enabled&&!classroom.user?action('Sign in','cloud-signin','compact'):!teaching&&name==='Alex Chan'&&route==='home'?action('Try demo','demo','compact',arrow()):`<button class="profile-link" type="button" data-action="${remoteActive()?'cloud-account':teaching?'teacher-profile':'profile'}"><span class="avatar">${esc(name.split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase())}</span><span class="account-name">${esc(name)}</span>${icon('chev',15)}</button>`}</div></div></header>`;
 }
 function footer() {
-  return `<footer><div class="container footer-inner"><span class="footer-brand">WeCert <span>· Interactive prototype</span></span><div><a href="#about">About us</a><a href="#resources">Free starter resources</a><a href="#proposal">Project Proposal</a><button type="button" data-action="help">Help centre</button><button type="button" data-action="privacy">Demo privacy</button></div></div></footer>`;
+  return `<footer><div class="container footer-inner"><span class="footer-brand">WeCert <span>${classroom.enabled?'· Classroom platform':'· Interactive prototype'}</span></span><div><a href="#about">About us</a><a href="#resources">Free starter resources</a><a href="#proposal">Project Proposal</a><button type="button" data-action="help">Help centre</button><button type="button" data-action="privacy">${classroom.enabled?'Account privacy':'Demo privacy'}</button></div></div></footer>`;
+}
+function homeRegistration() {
+  if(classroom.enabled)return `<section class="card registration">${tile('shield','blue')}<h2>${classroom.user?'Your learning, wherever you are':'Continue on any device'}</h2><p>Use your account to keep progress, questions and teacher feedback together.</p><div class="modal-actions">${classroom.user?link('Open learner dashboard','#dashboard','',arrow()):action('Sign in','cloud-signin','',arrow())}${!classroom.user?action('Create account','cloud-start-signup','outline'):action('Your account','cloud-account','outline')}</div>${syncIndicator()}</section>`;
+  return `<section class="card registration"><div class="register-symbol">${tile('people')}</div><h2>Create your demo profile</h2><p>Try the learner experience with a display name, or continue with the sample profile.</p>
+      <form id="profile-form"><div class="field"><label for="display-name">Display name</label><input id="display-name" class="input" name="name" placeholder="e.g. Alex Chan" maxlength="40" required autocomplete="off"></div>
+      <button class="button full" type="submit">Create profile${arrow()}</button></form>
+      <div class="account-hint"><a href="#dashboard">${state.name === "Alex Chan" ? "Continue as Alex Chan" : "Open learner dashboard"} ${chevron()}</a></div>
+    </section>`;
 }
 function home() {
-  return `<main class="container home" id="main-content" tabindex="-1"><div class="home-grid">
+  return `<main class="container home" id="main-content" tabindex="-1"><section class="workspace-entry" aria-label="Choose your workspace"><div><strong>Choose your workspace</strong><p>Learn as a student or manage teaching.</p></div><a class="workspace-choice" href="#dashboard">${tile('book')}<span><strong>Student edition</strong><small>Courses, practice & career support</small></span>${arrow()}</a><a class="workspace-choice teacher-choice" href="#teacher">${tile('briefcase','blue')}<span><strong>Teacher edition</strong><small>Courses, progress & learner questions</small></span>${arrow()}</a></section><p class="workspace-entry-note">${classroom.enabled?'Students and teachers use separate accounts. Your progress is available across devices.':'Demo workspaces share data in this browser.'}</p><div class="home-grid">
     <section class="hero"><div class="hero-picture"></div><div class="hero-copy">
       <div class="hero-kicker"><i></i> Vocational training in Hong Kong</div>
       <h1>Build skills for your<br>next career move.</h1>
       <p class="brand-tagline">Build skills. Unlock opportunities.</p><p>Find affordable training, take a free skills assessment and get support as you move into work.</p>
       <div class="hero-actions">${link('Start free assessment','#assessment','light',arrow())}${link('Browse courses','#courses','hero-secondary')}</div>
     </div></section>
-    <section class="card registration"><div class="register-symbol">${tile('people')}</div><h2>Create your demo profile</h2><p>Try the learner experience with a display name, or continue with the sample profile.</p>
-      <form id="profile-form"><div class="field"><label for="display-name">Display name</label><input id="display-name" class="input" name="name" placeholder="e.g. Alex Chan" maxlength="40" required autocomplete="off"></div>
-      <button class="button full" type="submit">Create profile${arrow()}</button></form>
-      <div class="account-hint"><a href="#dashboard">${state.name === "Alex Chan" ? "Continue as Alex Chan" : "Open learner dashboard"} ${chevron()}</a></div>
-    </section></div>
+    ${homeRegistration()}</div>
     <section class="journey-section"><div class="section-heading"><div><h2>A clear path from skills to opportunity</h2><p>Start where you are. Take one practical step at a time.</p></div></div>
       <ol class="journey"><li><b>01</b><h3>Assess your skills</h3><p>Try four short workplace scenarios.</p></li><li><b>02</b><h3>Build your learning plan</h3><p>Match skills, schedule and budget.</p></li><li><b>03</b><h3>Train and practise</h3><p>Learn, apply and check your understanding.</p></li><li><b>04</b><h3>Get career support</h3><p>Prepare your CV and explore opportunities.</p></li></ol>
       <article class="card example-journey">${badge('Illustrative learner journey','sand')}<h3>From retail experience to office skills</h3><p>A sample retail worker builds on customer service experience, practises a task tracker in Spreadsheet Essentials, then prepares an administration CV with career support. A referral or job is never guaranteed.</p>${link('Find your starting point','#assessment','outline',arrow())}</article>
@@ -123,7 +126,7 @@ function courseDetail(course) {
       <p class="fineprint">${corporate ? 'Training can be adapted to your team’s needs.' : 'Illustrative total fee for the whole course, not a monthly charge. Includes teaching materials, practice tasks and learner support. No payment is collected.'}</p>
       <dl><dt>Course outcome</dt><dd>${course.credential}</dd>${course.external ? `<dt>External pathway</dt><dd>${course.external}</dd>` : ''}</dl>
       <p class="fineprint">${course.external ? 'Exam entry and fees are separate. Exam subsidies and partner arrangements are proposed and subject to confirmation.' : corporate ? 'Send a sample enquiry to try the employer flow.' : 'CEF reimbursement is a proposed route for eligible registered courses. Eligibility and recognition must be confirmed.'}</p>
-      ${!corporate ? link('Try free starter material',lessonHref(course.id,1),'outline',arrow()) : ''}${corporate ? action('Try an employer enquiry','employer','',arrow()) : enrolled ? action('Open in dashboard','enrol','',arrow(),`data-id="${course.id}"`) : action(course.demo ? 'Try demo enrolment' : 'Add preview to plan','enrol','',arrow(),`data-id="${course.id}"`)}
+      ${!corporate ? link('Try free starter material',lessonHref(course.id,1),'outline',arrow()) : ''}${corporate ? action('Try an employer enquiry','employer','',arrow()) : enrolled ? action('Open in dashboard','enrol','',arrow(),`data-id="${course.id}"`) : action(classroom.enabled?'Add to learning plan':course.demo ? 'Try demo enrolment' : 'Add preview to plan','enrol','',arrow(),`data-id="${course.id}"`)}
     </section></div></main>`;
 }
 function options(items, selected) {
@@ -178,8 +181,9 @@ function quiz() {
 }
 function render(moveFocus=false) {
   const route = currentRoute();
-  const views = {home,courses:catalog,course:()=>courseDetail(getCourse(subroute())),assessment,dashboard,lesson:lessonPage,about,proposal,resources};
-  app.innerHTML = header(route) + (Object.hasOwn(views,route) ? views[route]() : notFound()) + footer();
+  const views = {home,courses:catalog,course:()=>courseDetail(getCourse(subroute())),assessment,dashboard,lesson:lessonPage,about,proposal,resources,teacher:teacherOverview,'teacher-courses':teacherCourses,'teacher-course':teacherCourse,'teacher-learners':teacherLearnerList,'teacher-learner':teacherLearner,'teacher-inbox':teacherInbox};
+  app.innerHTML = header(route) + (workspaceGate(route) || (Object.hasOwn(views,route) ? views[route]() : notFound())) + footer();
+  viewHasUnsavedChanges=false;
   const heading = document.querySelector('main h1');
   document.title = route === 'home' ? 'WeCert | Vocational Training & Career Support' : (heading?.textContent.trim() || 'Page') + ' | WeCert';
   localize();
@@ -189,8 +193,8 @@ function go(route) {
   if (location.hash === '#'+route) { render(true); return; }
   location.hash = route;
 }
-function refreshAssessment() {
-  save();
+async function refreshAssessment() {
+  await save();
   render(true);
 }
 function changeFilter() {
@@ -198,9 +202,12 @@ function changeFilter() {
   localize(document.querySelector('#course-results'));
 }
 function resetModal() {
+  if(remoteActive()){modal('Your account privacy',`<p>Account progress and class messages are stored in the classroom database. Teachers can access learning records and questions; students can access their own records and published class messages.</p><p>Sign out when using a shared device.</p><div class="modal-actions">${action('Your account','cloud-account','outline')}${action('Done','close')}</div>`);return;}
   modal('Demo privacy', `<p>Demo profiles, assessment answers, comments, bookings and income examples are stored in this browser. Use sample details. The demo does not create an account, process payments or send questions and bookings to staff.</p><p>You can clear your changes and return to the sample profile.</p><div class="modal-actions">${action('Reset demo data','reset','outline')}${action('Done','close')}</div>`);
 }
-function actions(button) {
+async function actions(button) {
+  if(await handleCloudAction(button))return;
+  if(await handleTeacherAction(button))return;
   switch (button.dataset.action) {
     case 'close': dialog.close(); break;
     case 'demo': go('dashboard'); break;
@@ -213,7 +220,7 @@ function actions(button) {
       state.assessmentAnswers = [];
       state.assessed = false;
       step = 2;
-      refreshAssessment();
+      await refreshAssessment();
       break;
     case 'skills-back': step = 1; render(true); break;
     case 'edit-assessment':
@@ -223,7 +230,7 @@ function actions(button) {
       break;
     case 'review':
       state.review = true;
-      save();
+      await save();
       render();
       note('Demo review saved locally. No adviser was contacted.');
       break;
@@ -234,9 +241,10 @@ function actions(button) {
     case 'enrol': {
       const course = getCourse(button.dataset.id);
       if (!course) break;
+      if(classroom.enabled&&!classroom.user){sessionStorage.setItem('wecert-pending-course',course.id);go('dashboard');note('Sign in to add this course to your learning plan.');break;}
       if (!Object.hasOwn(state.courses,course.id)) state.courses[course.id] = [];
       state.selectedCourse = course.id;
-      save();
+      await save();
       go('dashboard');
       note('Course opened in your demo learning plan.');
       break;
@@ -247,7 +255,7 @@ function actions(button) {
     case 'select-course':
       if (!getCourse(button.dataset.id)) break;
       state.selectedCourse = button.dataset.id;
-      save();
+      await save();
       dialog.close();
       render();
       break;
@@ -255,7 +263,7 @@ function actions(button) {
       const id = state.selectedCourse;
       const completed = state.courses[id] || [];
       state.courses[id] = [...new Set([...completed,activeLesson])];
-      save();
+      await save();
       render();
       note('Lesson complete. Your course progress was updated.');
       break;
@@ -264,7 +272,7 @@ function actions(button) {
     case 'book': showBooking(button.dataset.type); break;
     case 'cancel-booking':
       state.appointment = null;
-      save();
+      await save();
       dialog.close();
       render();
       note('Demo booking cancelled.');
@@ -291,7 +299,7 @@ function actions(button) {
     }
     case 'save-interest':
       state.interestByCourse[state.selectedCourse] = true;
-      save();
+      await save();
       dialog.close();
       render();
       note('Internship interest saved in this demo.');
@@ -317,11 +325,12 @@ function actions(button) {
       break;
   }
 }
-document.addEventListener('click',event=>{
+document.addEventListener('click',async event=>{
+  try {
   const languageButton = event.target.closest('button[data-language]');
   if (languageButton) {setLanguage(languageButton.dataset.language); return;}
   const button = event.target.closest('button[data-action]');
-  if (button) actions(button);
+  if(button){const wasDisabled=button.disabled;button.disabled=true;try{await actions(button);}finally{if(button.isConnected)button.disabled=wasDisabled;}}
   const anchor = event.target.closest('a[href^="#"]');
   if (anchor && dialog.open) dialog.close();
   if (anchor?.classList.contains('skip')) {
@@ -329,14 +338,20 @@ document.addEventListener('click',event=>{
     document.querySelector('#main-content').focus();
   }
   localize();
+  }catch(error){showCloudError(error);}
 });
 document.addEventListener('input',event=>{
+  if(event.target.closest('form'))viewHasUnsavedChanges=true;
   if (event.target.id !== 'course-search') return;
   filter.query = event.target.value;
   changeFilter();
 });
-document.addEventListener('change',event=>{
+document.addEventListener('change',async event=>{
+  try {
   const field = event.target;
+  if(field.closest('form'))viewHasUnsavedChanges=true;
+  if(field.id==='teacher-inbox-course'){teacherInboxFilter.course=field.value;render();return;}
+  if(field.id==='teacher-inbox-status'){teacherInboxFilter.status=field.value;render();return;}
   if (field.id === 'course-type') { filter.type = field.value; changeFilter(); }
   if (field.id === 'course-mode') { filter.mode = field.value; changeFilter(); }
   if (field.dataset.exam !== undefined) {
@@ -344,10 +359,11 @@ document.addEventListener('change',event=>{
     const id = state.selectedCourse;
     const prep = state.examByCourse[id] || [];
     state.examByCourse[id] = field.checked ? [...new Set([...prep,task])] : prep.filter(n=>n!==task);
-    save();
+    await save();
     const stat = document.querySelectorAll('.stat')[1];
     if (stat) stat.querySelector('strong').textContent = t(state.quizByCourse[id] ? 'Passed' : state.examByCourse[id].length+' of 4 prep tasks');
   }
+  }catch(error){showCloudError(error);}
 });
 function tutorReply(question) {
   const c = getCourse(state.selectedCourse);
@@ -355,10 +371,16 @@ function tutorReply(question) {
   if (!c.demo) return 'This course is a preview; detailed tutor guidance is not available yet. Explore the outline or switch to a complete demo route.';
   return 'From “'+unit.title+'”: '+unit.guide+' Practice: '+unit.task+' This scripted response uses the current lesson and does not interpret every question.';
 }
-document.addEventListener('submit',event=>{
+document.addEventListener('submit',async event=>{
   const form = event.target;
   const data = new FormData(form);
   event.preventDefault();
+  const submit=form.querySelector('button[type=submit]');
+  const controls=[...form.elements].map(el=>({el,disabled:el.disabled}));
+  for(const {el} of controls)el.disabled=true;
+  try {
+  if(await handleCloudSubmit(form,data))return;
+  if(await handleTeacherSubmit(form,data))return;
   switch (form.id) {
     case 'profile-form': {
       const name = data.get('name').trim();
@@ -370,7 +392,7 @@ document.addEventListener('submit',event=>{
         return;
       }
       state.name = name;
-      save();
+      await save();
       if (dialog.open) { dialog.close(); render(); } else { go('dashboard'); }
       note('Demo profile saved.');
       break;
@@ -387,18 +409,18 @@ document.addEventListener('submit',event=>{
         state.review = false;
       }
       step++;
-      refreshAssessment();
+      await refreshAssessment();
       break;
     case 'scenario-form':
       state.assessmentAnswers = questionsFor(state.profile).map((_,i)=>Number(data.get('q'+i)));
       state.assessed = true;
       state.review = false;
       step = 3;
-      refreshAssessment();
+      await refreshAssessment();
       break;
     case 'funding-form':
       state.fundingEnquiry = data.get('topic').trim();
-      save(); dialog.close(); note('Funding enquiry saved in this browser. No adviser was contacted.');
+      await save(); dialog.close(); note('Funding enquiry saved in this browser. No adviser was contacted.');
       break;
     case 'followup-form': {
       const record = {month:Number(data.get('month')),status:data.get('status'),hours:Number(data.get('hours')),income:Number(data.get('income'))};
@@ -407,16 +429,17 @@ document.addEventListener('submit',event=>{
         return;
       }
       state.followups = state.followups.filter(f=>f.month!==record.month).concat(record);
-      save(); dialog.close(); render(); note('Illustrative follow-up saved.');
+      await save(); dialog.close(); render(); note('Illustrative follow-up saved.');
       break;
     }
     case 'comment-form': {
       const question = data.get('question').trim();
       if (!question) return;
       const recipient = data.get('recipient');
+      if(remoteActive()){await studentSaveChain;applyCloudStudent(await classroomApi('/student/questions',{method:'POST',body:{course:state.selectedCourse,lesson:activeLesson,question,recipient}}));render();note(recipient==='Teacher'?'Question sent to your teacher.':'Scripted tutor reply added.');break;}
       const reply = recipient !== 'Teacher' ? tutorReply(question) : 'Question saved in the demo. In a live course, your teacher would reply in this discussion.';
-      state.comments.push({course:state.selectedCourse,lesson:activeLesson,recipient,question,reply});
-      save();
+      state.comments.push({id:crypto.randomUUID(),authorName:state.name,course:state.selectedCourse,lesson:activeLesson,recipient,question,reply,createdAt:new Date().toISOString()});
+      await save();
       render();
       document.querySelector('.comment:last-child')?.scrollIntoView({block:'nearest'});
       note(recipient !== 'Teacher' ? 'Scripted tutor reply added.' : 'Teacher question saved in this demo.');
@@ -424,14 +447,14 @@ document.addEventListener('submit',event=>{
     }
     case 'booking-form':
       state.appointment = {type:data.get('type'),slot:data.get('slot')};
-      save();
+      await save();
       dialog.close();
       render();
       note('Career appointment saved in this demo.');
       break;
     case 'income-form':
       state.salary = {before:Number(data.get('before')),after:Number(data.get('after'))};
-      save();
+      await save();
       dialog.close();
       render();
       note('Income comparison saved in this demo.');
@@ -439,14 +462,15 @@ document.addEventListener('submit',event=>{
     case 'quiz-form': {
       const id = form.dataset.course;
       const questions = courseChecks[id];
-      const correct = questions.filter((q,i)=>Number(data.get('q'+i))===q.answer).length;
-      const passed = correct === questions.length;
+      let correct = questions.filter((q,i)=>Number(data.get('q'+i))===q.answer).length;
+      let passed = correct === questions.length;
+      if(remoteActive()){await studentSaveChain;const result=await classroomApi('/student/quiz',{method:'POST',body:{course:id,answers:questions.map((_,i)=>Number(data.get('q'+i)))}});applyCloudStudent(result);correct=result.correct;passed=result.passed;}
       document.querySelector('#quiz-feedback').innerHTML = `<strong>${correct} of ${questions.length} correct. ${passed?'Demo check passed.':'Review the explanations and try again.'}</strong>${questions.map((q,i)=>`<p>${i+1}. ${q.explanation}</p>`).join('')}`;
       localize(dialog);
       if (passed) {
         state.quizByCourse[id] = true;
         state.examByCourse[id] = [...new Set([...(state.examByCourse[id]||[]),2])];
-        save(); render();
+        if(!remoteActive())await save(); render();
       }
       break;
     }
@@ -454,14 +478,21 @@ document.addEventListener('submit',event=>{
       modal('Sample enquiry',`<p data-user-content>${esc(data.get('topic').trim())}</p><p>This previews the training request a company could submit.</p><div class="modal-actions">${action('Done','close')}</div>`);
       break;
   }
+  }catch(error){showCloudError(error);}
+  finally{for(const {el,disabled} of controls)if(el.isConnected)el.disabled=disabled;}
 });
-function routeChanged() {
+async function routeChanged() {
   // Old numeric links always belonged to the original spreadsheet lesson route.
   if (/^#lesson\/\d+(?:\/(?:ai|teacher))?$/.test(location.hash)) {
     const parts = location.hash.slice(1).split('/');
     history.replaceState(null,'',lessonHref('spreadsheets',Number(parts[1]),parts[2]||''));
   }
   if (dialog.open) dialog.close();
+  if(remoteActive()&&(teacherRoute(currentRoute())||protectedStudentRoutes.includes(currentRoute()))){
+    app.innerHTML=header(currentRoute())+`<main class="container inner" id="main-content" tabindex="-1">${titleBlock('Opening your workspace','Checking your account and classroom connection…')}</main>`+footer();
+    localize();
+    try{await refreshClassroom(false);}catch(error){showCloudError(error);}
+  }
   if (currentRoute()==='assessment') step = state.assessed ? 3 : 0;
   if (currentRoute()==='courses') {
     const category = categories.find(c=>encodeURIComponent(c.name)===subroute());
@@ -470,5 +501,13 @@ function routeChanged() {
   render(true);
   window.scrollTo(0,0);
 }
+window.addEventListener('storage',event=>{
+  if(classroom.enabled)return;
+  if(event.key!==storageKey)return;
+  state=readState();
+  if(dialog.open||viewHasUnsavedChanges){note('Workspace data updated. Your unfinished text has been kept.');return;}
+  render();
+});
 window.addEventListener('hashchange',routeChanged);
 routeChanged();
+initializeClassroom();
