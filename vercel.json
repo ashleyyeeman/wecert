@@ -5,7 +5,7 @@
   "regions": ["iad1"],
   "functions": {
     "server.mjs": {
-      "includeFiles": "{course-data.js,index.html}",
+      "includeFiles": "{index.html,*.js,assets/**}",
       "maxDuration": 60
     }
   }

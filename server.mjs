@@ -122,6 +122,20 @@ app.onError((error,c)=>{
   if(status>=500)console.error('WeCert API failure',{path:new URL(c.req.url).pathname,code:typeof error.code==='string'?error.code:'SERVER_ERROR'});
   return c.json({error:status>=500?'Service temporarily unavailable. Please try again.':error.message},status);
 });
+const browserFiles=new Set(['style.css','translations.js','i18n.js','course-data.js','assessment.js','teacher-data.js','storage.js','assessment-views.js','learning-views.js','information-views.js','teacher-views.js','teacher-actions.js','remote.js','app.js']);
+const assetFiles=new Set(['bridge.svg','learners.jpg','instructor.jpg','spreadsheet-lesson.mp4','Sans-Regular.woff2','Sans-Medium.woff2','Sans-Semibold.woff2','Sans-Bold.woff2']);
+async function staticResponse(c,file) {
+  const bytes=await readFile(new URL('./'+file,import.meta.url));
+  const extension=file.split('.').pop();const types={js:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',svg:'image/svg+xml',jpg:'image/jpeg',mp4:'video/mp4',woff2:'font/woff2'};
+  c.header('Content-Type',types[extension]||'application/octet-stream');c.header('Cache-Control','public, max-age=0, must-revalidate');c.header('X-Content-Type-Options','nosniff');
+  const etag='"'+createHash('sha1').update(bytes).digest('hex')+'"';c.header('ETag',etag);
+  if(c.req.header('if-none-match')===etag)return c.body(null,304);
+  const range=c.req.header('range')?.match(/^bytes=(\d+)-(\d*)$/);
+  if(range){const start=Number(range[1]),end=Math.min(Number(range[2]||bytes.length-1),bytes.length-1);if(start>end||start>=bytes.length){c.header('Content-Range','bytes */'+bytes.length);return c.body(null,416);}c.header('Accept-Ranges','bytes');c.header('Content-Range',`bytes ${start}-${end}/${bytes.length}`);return c.body(bytes.subarray(start,end+1),206);}
+  return c.body(bytes);
+}
+app.get('/assets/:asset',c=>assetFiles.has(c.req.param('asset'))?staticResponse(c,'assets/'+c.req.param('asset')):c.notFound());
+app.get('/:file',c=>browserFiles.has(c.req.param('file'))?staticResponse(c,c.req.param('file')):c.notFound());
 app.get('/',async c=>c.html(await readFile(new URL('./index.html',import.meta.url),'utf8')));
 app.notFound(c=>c.json({error:'Not found'},404));
 export default app;
